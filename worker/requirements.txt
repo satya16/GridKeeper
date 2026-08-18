@@ -1,0 +1,3 @@
+websockets>=12.0
+zeroconf>=0.132
+psutil>=5.9

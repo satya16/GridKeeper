@@ -1,0 +1,16 @@
+[Unit]
+Description=Grid Manager worker (BOINC / Folding@home)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Must be a user that's in the `boinc` group (to run boinccmd) and can
+# reach FAHClient's local control socket. Replace with your actual user.
+User=%i
+ExecStart=/usr/bin/env grid-worker run
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

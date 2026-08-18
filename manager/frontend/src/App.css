@@ -1,0 +1,168 @@
+/* Domain-specific styling antd doesn't provide -- ported from the
+   previous dashboard.css. Layout chrome (cards, buttons, forms, layout)
+   uses antd components + the dark theme tokens in main.jsx instead. */
+
+.muted {
+  color: #8a8f98;
+  font-size: 0.85rem;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+}
+.dot.online {
+  background: #3ecf8e;
+}
+.dot.offline {
+  background: #8a8f98;
+}
+.dot.warn {
+  background: #f2a93c;
+}
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 0.15rem 0;
+  gap: 0.5rem;
+}
+
+.progress-bar {
+  height: 4px;
+  background: #2a2e38;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.progress-bar > div {
+  height: 100%;
+  background: #4f8cff;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #8a8f98;
+}
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.chart-legend-item .swatch {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.chart-svg-wrap {
+  position: relative;
+}
+.chart-svg-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-card {
+  position: relative;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  pointer-events: none;
+  background: #1a1a19;
+  border: 1px solid #2a2e38;
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 5;
+}
+.chart-tooltip.visible {
+  opacity: 1;
+}
+.chart-tooltip .tt-time {
+  color: #8a8f98;
+  margin-bottom: 0.25rem;
+}
+.chart-tooltip .tt-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.chart-tooltip .tt-row .swatch {
+  width: 8px;
+  height: 8px;
+}
+.chart-tooltip .tt-value {
+  font-weight: 600;
+  margin-left: 0.6rem;
+}
+
+.metrics-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.metrics-filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid #2a2e38;
+  background: #171a21;
+  cursor: pointer;
+}
+.metrics-filter label.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.section-header h2 {
+  font-size: 0.95rem;
+  margin: 0;
+  color: #8a8f98;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
