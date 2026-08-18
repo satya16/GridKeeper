@@ -1,5 +1,7 @@
 # Grid Manager
 
+[![License: MIT](https://img.shields.io/github/license/satya16/GridKeeper)](LICENSE)
+
 A fleet manager for BOINC and Folding@home: a `grid-worker` runs on each
 compute machine, a `grid-manager` gives you one dashboard to see every
 machine's status and remotely start/stop projects.
