@@ -10,16 +10,16 @@
 // good -- pair it with the screenshot it saves for that.
 //
 // Usage: node scripts/verify.mjs [base_url] [admin_password]
-// Requires the manager running with a matching GRID_MANAGER_ADMIN_PASSWORD
+// Requires the manager running with a matching GRIDKEEPER_ADMIN_PASSWORD
 // and `npm run build` already done (serves from app/static/dist/).
 
 import { chromium } from 'playwright'
 
 const baseUrl = process.argv[2] || 'http://127.0.0.1:8000'
-const password = process.argv[3] || process.env.GRID_MANAGER_ADMIN_PASSWORD
+const password = process.argv[3] || process.env.GRIDKEEPER_ADMIN_PASSWORD
 if (!password) {
   console.error('Usage: node scripts/verify.mjs [base_url] [admin_password]')
-  console.error('(or set GRID_MANAGER_ADMIN_PASSWORD)')
+  console.error('(or set GRIDKEEPER_ADMIN_PASSWORD)')
   process.exit(1)
 }
 
@@ -73,7 +73,7 @@ console.log(`page errors: ${errors.length ? errors.join('; ') : 'none'}`)
 console.log(`console errors: ${consoleErrors.length ? consoleErrors.join('; ') : 'none'}`)
 console.log(`screenshot: ${screenshotPath}`)
 
-if (errors.length || title !== 'Grid Manager') {
+if (errors.length || title !== 'GridKeeper') {
   console.error('\nFAILED')
   process.exit(1)
 }

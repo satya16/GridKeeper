@@ -21,7 +21,7 @@ def _public_manager_url(request: Request) -> str:
     the LAN. Usually the same host the admin's browser is hitting, but can
     be overridden if the dashboard is reached via a different address
     (e.g. a reverse proxy) than the one workers should connect back to."""
-    override = os.environ.get("GRID_MANAGER_PUBLIC_URL")
+    override = os.environ.get("GRIDKEEPER_PUBLIC_URL")
     return override.rstrip("/") if override else str(request.base_url).rstrip("/")
 
 

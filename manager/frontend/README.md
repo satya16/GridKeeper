@@ -1,4 +1,4 @@
-# Grid Manager dashboard (frontend)
+# GridKeeper dashboard (frontend)
 
 The manager's admin dashboard -- React + [Ant Design](https://ant.design/),
 built with Vite. Replaced an earlier server-rendered Jinja2 + vanilla-JS
@@ -40,7 +40,7 @@ use the Vite dev server's own URL (it'll print one, typically
 ## Verify against a real browser
 
 ```bash
-GRID_MANAGER_ADMIN_PASSWORD=<yours> npm run verify
+GRIDKEEPER_ADMIN_PASSWORD=<yours> npm run verify
 ```
 
 Runs `scripts/verify.mjs`: loads the dashboard in headless Chromium

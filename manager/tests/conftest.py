@@ -5,8 +5,8 @@ import tempfile
 # import time to build its SQLAlchemy engine.
 _db_fd, _db_path = tempfile.mkstemp(suffix=".db")
 os.close(_db_fd)
-os.environ["GRID_MANAGER_DB"] = _db_path
-os.environ["GRID_MANAGER_ADMIN_PASSWORD"] = "test-admin-password"
+os.environ["GRIDKEEPER_DB"] = _db_path
+os.environ["GRIDKEEPER_ADMIN_PASSWORD"] = "test-admin-password"
 
 import pytest
 from fastapi.testclient import TestClient

@@ -1,4 +1,4 @@
-# Grid Manager — Requirements
+# GridKeeper — Requirements
 
 A fleet manager for distributed-computing clients (BOINC and Folding@home)
 running on multiple machines, with a central manager app for visibility and
@@ -43,7 +43,7 @@ remote control.
 ```
  ┌─────────────┐        outbound WSS         ┌───────────────────┐
  │ grid-worker   │ ───────────────────────────▶│                    │
- │ (machine A)  │◀─────────────────────────── │   grid-manager      │
+ │ (machine A)  │◀─────────────────────────── │   GridKeeper        │
  └─────────────┘        commands + status      │  (FastAPI, SQLite)│
         │  local RPC/socket                    │                    │
         ▼                                      │  - REST API        │
@@ -60,11 +60,12 @@ remote control.
   and maintains a persistent outbound WebSocket connection to the
   manager. No inbound ports need to be opened on worker machines — this
   matters because home/lab machines are often behind NAT or firewalls.
-- **grid-manager**: a FastAPI app that (a) accepts worker WebSocket
-  connections, tracks their live status in memory + SQLite, (b) serves a
-  REST API + web dashboard for the admin, and (c) relays start/stop
-  commands from the dashboard to the right worker's WebSocket connection.
-- **grid-worker and grid-manager can run on the same machine.** Nothing in
+- **GridKeeper** (the manager): a FastAPI app that (a) accepts worker
+  WebSocket connections, tracks their live status in memory + SQLite,
+  (b) serves a REST API + web dashboard for the admin, and (c) relays
+  start/stop commands from the dashboard to the right worker's WebSocket
+  connection.
+- **grid-worker and GridKeeper can run on the same machine.** Nothing in
   the protocol distinguishes "local" from "remote" workers — a worker's
   `manager_url` just happens to resolve to `localhost`/the loopback
   interface. This is the natural setup for the machine that hosts the
@@ -107,7 +108,7 @@ remote control.
 8. Executes inbound commands idempotently and reports success/failure
    back to the manager per command (with a correlation id).
 
-## 5. Manager (grid-manager) requirements
+## 5. Manager (GridKeeper) requirements
 
 1. **Worker registry**: each worker has an id, display name, OS, list of
    detected backends (boinc/fah), last-seen timestamp, connection status
@@ -170,7 +171,7 @@ types in the code shown on that machine's console. No IP addresses, no
 copying tokens onto the worker.
 
 ```
- worker (unpaired)                          manager (grid-manager)
+ worker (unpaired)                          manager (GridKeeper)
  ──────────────────                         ────────────────────
  grid-worker run
    no config.toml found
@@ -373,13 +374,13 @@ apps themselves to package them, so this isn't blocked by the pending
 venv setup (section on top of this file / `CLAUDE.md`). `.deb` over Snap
 for `grid-worker` specifically, since Snap's confinement model fights its
 need for unsandboxed system access (`boinccmd`, FAH's raw socket,
-`loginctl`, mDNS/UDP); `grid-manager` is a plain web service and could go
+`loginctl`, mDNS/UDP); GridKeeper's manager is a plain web service and could go
 either way. Open question: satisfy Python dependencies via **apt
 `Depends`** (lighter, but version availability varies by Ubuntu release —
 riskiest for FastAPI/Starlette on older releases) or a **vendored venv
 inside the package** (heavier, but reproduces `requirements.txt` exactly
 regardless of target Ubuntu version). Also note: there's currently no
-systemd unit for `grid-manager` itself, only for `grid-worker` — needed
+systemd unit for GridKeeper's manager itself, only for `grid-worker` — needed
 before packaging the manager.
 
 ## 12. Open questions

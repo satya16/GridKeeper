@@ -1,7 +1,7 @@
 # grid-worker
 
-The worker half of Grid Manager. Runs on each machine that has BOINC and/or
-Folding@home (FAHClient) installed, reports their status to a `grid-manager`,
+The worker half of GridKeeper. Runs on each machine that has BOINC and/or
+Folding@home (FAHClient) installed, reports their status to GridKeeper,
 and executes start/stop commands issued from the manager's dashboard.
 
 See [`../docs/REQUIREMENTS.md`](../docs/REQUIREMENTS.md) for the full design.
@@ -38,7 +38,7 @@ It will print a 6-digit code and advertise itself on the local network via
 mDNS:
 
 ```
-=== Pairing code: 482913 (valid 10 min) -- enter this in the Grid Manager dashboard ===
+=== Pairing code: 482913 (valid 10 min) -- enter this in the GridKeeper dashboard ===
 ```
 
 On the manager's dashboard, the machine shows up under "Discovered on your
@@ -100,7 +100,7 @@ pausing/resuming stays a manager-dashboard action.
 
 ## Notes
 
-- Runs fine on the same machine as `grid-manager` -- see "Running the
+- Runs fine on the same machine as GridKeeper -- see "Running the
   worker on the same machine as the manager" in the top-level
   [README](../README.md) for the recommended setup (separate venvs, use
   the manual token flow instead of LAN discovery since you don't need it

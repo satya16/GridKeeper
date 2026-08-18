@@ -15,7 +15,7 @@ _basic = HTTPBasic()
 # was minted during enrollment. Nothing here is meant to survive contact
 # with a multi-user future -- see docs/REQUIREMENTS.md section 6/9.
 
-ADMIN_PASSWORD_ENV = "GRID_MANAGER_ADMIN_PASSWORD"
+ADMIN_PASSWORD_ENV = "GRIDKEEPER_ADMIN_PASSWORD"
 DEFAULT_ADMIN_PASSWORD = "changeme"
 
 
@@ -43,7 +43,7 @@ def get_admin_password() -> str:
 
 def require_admin(credentials: HTTPBasicCredentials = Depends(_basic)) -> str:
     """HTTP Basic auth for the dashboard + REST API. Username can be anything
-    (e.g. 'admin'); only the password is checked against GRID_MANAGER_ADMIN_PASSWORD."""
+    (e.g. 'admin'); only the password is checked against GRIDKEEPER_ADMIN_PASSWORD."""
     if not hmac.compare_digest(credentials.password, get_admin_password()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

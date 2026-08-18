@@ -9,7 +9,7 @@ def test_dashboard_requires_auth(client):
 def test_dashboard_with_correct_password(client):
     resp = client.get("/", auth=AUTH)
     assert resp.status_code == 200
-    assert "Grid Manager" in resp.text
+    assert "GridKeeper" in resp.text
 
 
 def test_dashboard_with_wrong_password(client):

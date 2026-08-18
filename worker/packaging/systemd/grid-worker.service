@@ -1,5 +1,5 @@
 [Unit]
-Description=Grid Manager worker (BOINC / Folding@home)
+Description=GridKeeper worker (BOINC / Folding@home)
 After=network-online.target
 Wants=network-online.target
 

@@ -10,7 +10,7 @@ files:
 relates_to: [worker, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing]
 ---
 
-The FastAPI app (`grid-manager`) — the "one dashboard" side of the
+The FastAPI app (GridKeeper's manager) — the "one dashboard" side of the
 system. Accepts worker WebSocket connections at `/ws/worker`
 (`main.py::worker_ws`), tracks which are currently online in memory
 (`ws_manager.py::ConnectionManager`, module-level singleton `manager` —

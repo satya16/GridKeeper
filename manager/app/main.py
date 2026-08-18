@@ -19,7 +19,7 @@ from .metrics_store import store as metrics_store
 from .ws_manager import manager
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("grid_manager")
+logger = logging.getLogger("gridkeeper")
 
 _APP_DIR = os.path.dirname(__file__)
 
@@ -32,7 +32,7 @@ async def _lifespan(app: FastAPI):
     await discovery_registry.stop()
 
 
-app = FastAPI(title="Grid Manager", lifespan=_lifespan)
+app = FastAPI(title="GridKeeper", lifespan=_lifespan)
 app.include_router(workers_api.router)
 app.include_router(pairing_api.router)
 app.include_router(discovery_api.router)

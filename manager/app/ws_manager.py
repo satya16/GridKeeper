@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import WebSocket
 
-logger = logging.getLogger("grid_manager.ws")
+logger = logging.getLogger("gridkeeper.ws")
 
 
 class ConnectionManager:

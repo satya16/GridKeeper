@@ -1,9 +1,9 @@
-# Grid Manager
+# GridKeeper
 
 [![License: MIT](https://img.shields.io/github/license/satya16/GridKeeper)](LICENSE)
 
 A fleet manager for BOINC and Folding@home: a `grid-worker` runs on each
-compute machine, a `grid-manager` gives you one dashboard to see every
+compute machine, GridKeeper gives you one dashboard to see every
 machine's status and remotely start/stop projects.
 
 Full requirements and design: [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 cd frontend && npm install && npm run build && cd ..   # builds the React+Ant Design dashboard into app/static/dist/
 
-export GRID_MANAGER_ADMIN_PASSWORD=changeme   # set your own
+export GRIDKEEPER_ADMIN_PASSWORD=changeme   # set your own
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -38,9 +38,9 @@ Open the dashboard using the manager machine's **LAN IP**, not
 the manager hands it back whatever host you used to reach the dashboard so
 the worker knows where to connect for its normal WebSocket session; if
 that was `localhost`, a *different* machine would be told to connect to
-itself. (Or set `GRID_MANAGER_PUBLIC_URL` on the manager to pin this
+itself. (Or set `GRIDKEEPER_PUBLIC_URL` on the manager to pin this
 explicitly, e.g. in the systemd/env config for a real deployment.)
-Any username works, password = `GRID_MANAGER_ADMIN_PASSWORD`.
+Any username works, password = `GRIDKEEPER_ADMIN_PASSWORD`.
 
 Terminal 2 -- worker (on the machine you want to manage -- this can be a
 different machine on the LAN, or **the same machine the manager is running

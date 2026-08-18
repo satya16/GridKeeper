@@ -17,7 +17,7 @@ import logging
 from zeroconf import ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-logger = logging.getLogger("grid_manager.discovery")
+logger = logging.getLogger("gridkeeper.discovery")
 
 SERVICE_TYPE = "_grid-worker._tcp.local."
 SERVICE_INFO_TIMEOUT_MS = 3000

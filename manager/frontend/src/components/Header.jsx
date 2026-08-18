@@ -20,7 +20,7 @@ export function Header() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>
-          Grid Manager
+          GridKeeper
         </Typography.Title>
         <Button type="primary" onClick={handleNewToken}>
           New pairing token

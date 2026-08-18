@@ -105,8 +105,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="grid-worker")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    enroll_parser = subparsers.add_parser("enroll", help="Register this machine with a grid-manager using a pairing token")
-    enroll_parser.add_argument("--manager", required=True, help="Manager base URL, e.g. http://grid-manager:8000")
+    enroll_parser = subparsers.add_parser("enroll", help="Register this machine with GridKeeper using a pairing token")
+    enroll_parser.add_argument("--manager", required=True, help="Manager base URL, e.g. http://gridkeeper:8000")
     enroll_parser.add_argument("--token", required=True, help="One-time pairing token from the dashboard")
     enroll_parser.add_argument("--name", required=True, help="Display name for this machine")
     enroll_parser.set_defaults(func=cmd_enroll)

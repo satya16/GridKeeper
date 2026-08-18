@@ -1,7 +1,7 @@
 [project]
 name = "grid-worker"
 version = "0.1.0"
-description = "Grid Manager worker -- controls local BOINC/Folding@home clients and reports status to a grid-manager"
+description = "GridKeeper worker -- controls local BOINC/Folding@home clients and reports status to GridKeeper"
 requires-python = ">=3.11"
 dependencies = [
     "websockets>=12.0",

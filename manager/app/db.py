@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
-DB_PATH = os.environ.get("GRID_MANAGER_DB", os.path.join(os.path.dirname(__file__), "..", "grid.db"))
+DB_PATH = os.environ.get("GRIDKEEPER_DB", os.path.join(os.path.dirname(__file__), "..", "grid.db"))
 DB_URL = f"sqlite:///{os.path.abspath(DB_PATH)}"
 
 engine = create_engine(DB_URL, connect_args={"check_same_thread": False})

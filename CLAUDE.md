@@ -1,4 +1,4 @@
-# Grid Manager — working notes
+# GridKeeper — working notes
 
 See [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) for the full design,
 [`README.md`](README.md) for the quickstart, and

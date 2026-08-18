@@ -1,5 +1,5 @@
 """Unpaired-state handling: generates a 6-digit pairing code, advertises
-this machine on the LAN via mDNS so the grid-manager dashboard can discover
+this machine on the LAN via mDNS so the GridKeeper dashboard can discover
 it, and runs a tiny local HTTP listener the manager dials directly to
 verify the code and hand over a bearer token.
 
@@ -80,7 +80,7 @@ class PairingSession:
         banner = (
             f"=== Pairing code: {self._code} "
             f"(valid {CODE_TTL_SECONDS // 60} min) "
-            "-- enter this in the Grid Manager dashboard ==="
+            "-- enter this in the GridKeeper dashboard ==="
         )
         logger.info(banner)
         print(f"\n{banner}\n", flush=True)
@@ -184,7 +184,7 @@ class _PairingHandler(http.server.BaseHTTPRequestHandler):
 
 def wait_for_pairing(active_backends: list[str]) -> Config:
     """Blocks (in the calling thread) until an admin pairs this machine
-    from the grid-manager dashboard, then returns the resulting Config."""
+    from the GridKeeper dashboard, then returns the resulting Config."""
     hostname = socket.gethostname()
     session = PairingSession(name=hostname, os_name=platform.system().lower(), backends=active_backends)
 
