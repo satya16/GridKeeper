@@ -1,24 +1,16 @@
+import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
-export function Header({ onToggleSider, onLogout }) {
+export function Header({ siderCollapsed, onToggleSider, onLogout }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-      <button
-        type="button"
+      <Button
+        type="text"
         onClick={onToggleSider}
         aria-label="Toggle menu"
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'inherit',
-          fontSize: '1.3rem',
-          lineHeight: 1,
-          cursor: 'pointer',
-          padding: '4px 6px',
-        }}
-      >
-        ☰
-      </button>
+        icon={siderCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+        style={{ fontSize: '1.1rem' }}
+      />
       <Button onClick={onLogout}>Log out</Button>
     </div>
   )

@@ -98,7 +98,11 @@ export default function App() {
       </Layout.Sider>
       <Layout>
         <Layout.Header style={{ padding: '0 1.5rem' }}>
-          <Header onToggleSider={() => setSiderCollapsed((c) => !c)} onLogout={handleLogout} />
+          <Header
+            siderCollapsed={siderCollapsed}
+            onToggleSider={() => setSiderCollapsed((c) => !c)}
+            onLogout={handleLogout}
+          />
         </Layout.Header>
         <Layout.Content className="app-content">
           {page === 'fleet' && <FleetPage nodes={nodes || []} groups={groups || []} onChanged={onChanged} />}
