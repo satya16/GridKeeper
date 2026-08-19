@@ -15,13 +15,13 @@ function summarizeBulkResults(results) {
   return msg
 }
 
-function CredentialRow({ credential, nodes, groups, onChanged, onNodeChanged }) {
+function CredentialRow({ credential, nodes, groups, perms, onChanged, onNodeChanged }) {
   const [target, setTarget] = useState()
   const [applying, setApplying] = useState(false)
 
   const targetOptions = [
-    { label: 'All machines', options: [{ value: 'all', label: 'All machines' }] },
-    ...(groups.length
+    ...(perms.canApplyCredentialToAll ? [{ label: 'All machines', options: [{ value: 'all', label: 'All machines' }] }] : []),
+    ...(perms.canApplyCredentialToGroup && groups.length
       ? [{ label: 'Whole group', options: groups.map((g) => ({ value: `group:${g}`, label: g })) }]
       : []),
     { label: 'Just one machine', options: nodes.map((w) => ({ value: `node:${w.id}`, label: w.name })) },
@@ -74,26 +74,32 @@ function CredentialRow({ credential, nodes, groups, onChanged, onNodeChanged }) 
         </span>
       </span>
       <Space size="small" wrap>
-        <Select
-          size="small"
-          style={{ minWidth: 200 }}
-          placeholder="Apply to…"
-          value={target}
-          onChange={setTarget}
-          options={targetOptions}
-        />
-        <Button size="small" type="primary" loading={applying} disabled={applying || !target} onClick={handleApply}>
-          Apply
-        </Button>
-        <Button size="small" danger onClick={handleDelete}>
-          Delete
-        </Button>
+        {perms.canApplyCredential && (
+          <>
+            <Select
+              size="small"
+              style={{ minWidth: 200 }}
+              placeholder="Apply to…"
+              value={target}
+              onChange={setTarget}
+              options={targetOptions}
+            />
+            <Button size="small" type="primary" loading={applying} disabled={applying || !target} onClick={handleApply}>
+              Apply
+            </Button>
+          </>
+        )}
+        {perms.canManageCredentials && (
+          <Button size="small" danger onClick={handleDelete}>
+            Delete
+          </Button>
+        )}
       </Space>
     </div>
   )
 }
 
-export function CredentialsSection({ nodes, groups, onNodeChanged }) {
+export function CredentialsSection({ nodes, groups, perms, onNodeChanged }) {
   const { data: credentials, status, refresh } = usePolling(api.listCredentials, CREDENTIALS_REFRESH_INTERVAL_MS)
   const [form] = Form.useForm()
 
@@ -125,6 +131,7 @@ export function CredentialsSection({ nodes, groups, onNodeChanged }) {
             credential={c}
             nodes={nodes}
             groups={groups}
+            perms={perms}
             onChanged={refresh}
             onNodeChanged={onNodeChanged}
           />
@@ -133,22 +140,24 @@ export function CredentialsSection({ nodes, groups, onNodeChanged }) {
         <p className="task-row muted">No saved credentials yet.</p>
       )}
 
-      <Form form={form} layout="inline" onFinish={handleCreate} style={{ marginTop: 12 }}>
-        <Form.Item name="name" rules={[{ required: true }]}>
-          <Input placeholder="Name (e.g. School WCG account)" style={{ width: 220 }} />
-        </Form.Item>
-        <Form.Item name="project_url" rules={[{ required: true }]}>
-          <Input placeholder="Project URL" style={{ width: 220 }} />
-        </Form.Item>
-        <Form.Item name="account_key" rules={[{ required: true }]}>
-          <Input.Password placeholder="Account key" style={{ width: 200 }} />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit">
-            Save
-          </Button>
-        </Form.Item>
-      </Form>
+      {perms.canManageCredentials && (
+        <Form form={form} layout="inline" onFinish={handleCreate} style={{ marginTop: 12 }}>
+          <Form.Item name="name" rules={[{ required: true }]}>
+            <Input placeholder="Name (e.g. School WCG account)" style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item name="project_url" rules={[{ required: true }]}>
+            <Input placeholder="Project URL" style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item name="account_key" rules={[{ required: true }]}>
+            <Input.Password placeholder="Account key" style={{ width: 200 }} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Save
+            </Button>
+          </Form.Item>
+        </Form>
+      )}
     </Card>
   )
 }

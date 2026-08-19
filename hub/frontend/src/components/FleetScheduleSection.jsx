@@ -3,12 +3,18 @@ import { Card, Select, Space, Typography, message } from 'antd'
 import { api } from '../api.js'
 import { SchedulePolicyForm } from './SchedulePolicyForm.jsx'
 
-export function FleetScheduleSection({ groups, onApplied }) {
+export function FleetScheduleSection({ groups, canApplyToAll, onApplied }) {
   const [group, setGroup] = useState('')
+  // A group_manager has no "All machines" option (backend rejects
+  // apply-all for anyone but admin) -- fall back to their own first
+  // group rather than leaving the selection on a value they can't
+  // actually submit. Derived at render time, not via an effect, since
+  // it's just "pick a sane default until the user picks one themself."
+  const effectiveGroup = group || (!canApplyToAll && groups.length ? groups[0] : '')
 
   const handleSubmit = async (policy) => {
     try {
-      const result = await api.applySchedule(group, policy)
+      const result = await api.applySchedule(effectiveGroup, policy)
       message.success(`Schedule applied to ${result.length} machine(s).`)
       onApplied()
     } catch (err) {
@@ -26,12 +32,18 @@ export function FleetScheduleSection({ groups, onApplied }) {
           Apply to
           <Select
             style={{ minWidth: 180 }}
-            value={group}
+            value={effectiveGroup}
             onChange={setGroup}
-            options={[{ value: '', label: 'All machines' }, ...groups.map((g) => ({ value: g, label: g }))]}
+            options={[
+              ...(canApplyToAll ? [{ value: '', label: 'All machines' }] : []),
+              ...groups.map((g) => ({ value: g, label: g })),
+            ]}
           />
         </Space>
-        <SchedulePolicyForm submitLabel={group ? `Apply to "${group}"` : 'Apply to all machines'} onSubmit={handleSubmit} />
+        <SchedulePolicyForm
+          submitLabel={effectiveGroup ? `Apply to "${effectiveGroup}"` : 'Apply to all machines'}
+          onSubmit={handleSubmit}
+        />
       </Space>
     </Card>
   )

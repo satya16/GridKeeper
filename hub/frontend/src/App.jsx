@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ClusterOutlined, HistoryOutlined, KeyOutlined, LineChartOutlined, UserOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { ClusterOutlined, KeyOutlined, LineChartOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { Layout, Menu, Space, Tabs, Typography } from 'antd'
 import { api, setUnauthorizedHandler } from './api.js'
 import { usePolling } from './usePolling.js'
@@ -10,9 +10,9 @@ import { LoginForm } from './components/LoginForm.jsx'
 import { CredentialsSection } from './components/CredentialsSection.jsx'
 import { MetricsSection } from './components/MetricsSection.jsx'
 import { FleetPage } from './pages/FleetPage.jsx'
-import { UsersPage } from './pages/UsersPage.jsx'
-import { AuditLogPage } from './pages/AuditLogPage.jsx'
+import { AdminConsolePage } from './pages/AdminConsolePage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
+import { getPermissions } from './permissions.js'
 import './App.css'
 
 const NODES_REFRESH_INTERVAL_MS = 5000
@@ -35,12 +35,11 @@ const BASE_PAGES = [
   { key: 'credentials', label: 'Credentials', icon: <KeyOutlined /> },
   { key: 'metrics', label: 'Metrics', icon: <LineChartOutlined /> },
 ]
-// Admin-only nav items -- everyone gets Fleet/Credentials/Metrics/Profile,
-// but only an admin can manage the user list or see who did what.
-const ADMIN_PAGES = [
-  { key: 'users', label: 'Users', icon: <UserSwitchOutlined /> },
-  { key: 'audit-log', label: 'Audit Log', icon: <HistoryOutlined /> },
-]
+// Admin-only nav item -- everyone gets Fleet/Credentials/Metrics/Profile,
+// but only an admin can manage the user list or see who did what. Users
+// and Audit Log are both admin-only on the backend, so they're one nav
+// entry with two sub-tabs rather than two separate top-level items.
+const ADMIN_CONSOLE_PAGE = { key: 'admin-console', label: 'Admin Console', icon: <SafetyCertificateOutlined /> }
 const PROFILE_PAGE = { key: 'profile', label: 'Profile', icon: <UserOutlined /> }
 
 export default function App({ themeMode, onToggleTheme }) {
@@ -63,7 +62,7 @@ export default function App({ themeMode, onToggleTheme }) {
       .catch(() => setAuthenticated(false))
   }, [])
 
-  const pages = [...BASE_PAGES, ...(role === 'admin' ? ADMIN_PAGES : []), PROFILE_PAGE]
+  const pages = [...BASE_PAGES, ...(role === 'admin' ? [ADMIN_CONSOLE_PAGE] : []), PROFILE_PAGE]
 
   useEffect(() => {
     // Reactive, not just checked at click-time (selectPage below still does
@@ -77,6 +76,7 @@ export default function App({ themeMode, onToggleTheme }) {
 
   const { data: nodes, refresh: refreshNodes } = usePolling(api.listNodes, authenticated ? NODES_REFRESH_INTERVAL_MS : null)
   const { data: groups, refresh: refreshGroups } = usePolling(api.listGroups, authenticated ? GROUPS_REFRESH_INTERVAL_MS : null)
+  const perms = getPermissions(role)
 
   const onChanged = () => {
     refreshNodes()
@@ -172,7 +172,7 @@ export default function App({ themeMode, onToggleTheme }) {
       </Layout.Sider>
       <Layout.Content className="app-content">
         {page === 'fleet' && (
-          <FleetPage nodes={nodes || []} groups={groups || []} onChanged={onChanged} tabBarExtraContent={tabBarExtraContent} />
+          <FleetPage nodes={nodes || []} groups={groups || []} perms={perms} onChanged={onChanged} tabBarExtraContent={tabBarExtraContent} />
         )}
         {page === 'credentials' && (
           <Tabs
@@ -181,7 +181,9 @@ export default function App({ themeMode, onToggleTheme }) {
               {
                 key: 'credentials',
                 label: 'Credentials',
-                children: <CredentialsSection nodes={nodes || []} groups={groups || []} onNodeChanged={refreshNodes} />,
+                children: (
+                  <CredentialsSection nodes={nodes || []} groups={groups || []} perms={perms} onNodeChanged={refreshNodes} />
+                ),
               },
             ]}
           />
@@ -192,10 +194,9 @@ export default function App({ themeMode, onToggleTheme }) {
             items={[{ key: 'metrics', label: 'Metrics', children: <MetricsSection /> }]}
           />
         )}
-        {page === 'users' && role === 'admin' && (
-          <UsersPage nodes={nodes || []} groups={groups || []} tabBarExtraContent={tabBarExtraContent} />
+        {page === 'admin-console' && role === 'admin' && (
+          <AdminConsolePage nodes={nodes || []} groups={groups || []} tabBarExtraContent={tabBarExtraContent} />
         )}
-        {page === 'audit-log' && role === 'admin' && <AuditLogPage tabBarExtraContent={tabBarExtraContent} />}
         {page === 'profile' && <ProfilePage tabBarExtraContent={tabBarExtraContent} />}
       </Layout.Content>
     </Layout>

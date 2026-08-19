@@ -6,7 +6,7 @@ function pct(fraction) {
   return `${Math.round((fraction || 0) * 100)}%`
 }
 
-export function BoincBlock({ nodeId, boinc, onChanged }) {
+export function BoincBlock({ nodeId, boinc, canWrite, onChanged }) {
   const [attachForm] = Form.useForm()
   // Command dispatch already blocks until the node's real result comes
   // back (or a 15s timeout) -- these track "is that wait still in flight"
@@ -94,19 +94,21 @@ export function BoincBlock({ nodeId, boinc, onChanged }) {
                 {p.name || p.url}
                 {p.suspended ? ' (suspended)' : ''}
               </span>
-              <Space size="small" wrap>
-                <Button
-                  size="small"
-                  loading={isPending}
-                  disabled={isPending}
-                  onClick={() => runForProject(p.suspended ? 'resume_project' : 'suspend_project', p.url)}
-                >
-                  {p.suspended ? 'Start' : 'Stop'}
-                </Button>
-                <Button size="small" danger loading={isPending} disabled={isPending} onClick={() => detach(p.url)}>
-                  Detach
-                </Button>
-              </Space>
+              {canWrite && (
+                <Space size="small" wrap>
+                  <Button
+                    size="small"
+                    loading={isPending}
+                    disabled={isPending}
+                    onClick={() => runForProject(p.suspended ? 'resume_project' : 'suspend_project', p.url)}
+                  >
+                    {p.suspended ? 'Start' : 'Stop'}
+                  </Button>
+                  <Button size="small" danger loading={isPending} disabled={isPending} onClick={() => detach(p.url)}>
+                    Detach
+                  </Button>
+                </Space>
+              )}
             </div>
           )
         })
@@ -126,41 +128,45 @@ export function BoincBlock({ nodeId, boinc, onChanged }) {
         </div>
       ))}
 
-      <Space style={{ marginTop: 8 }} wrap>
-        <Button loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('resume_all')}>
-          Resume all
-        </Button>
-        <Button danger loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('suspend_all')}>
-          Suspend all
-        </Button>
-      </Space>
+      {canWrite && (
+        <>
+          <Space style={{ marginTop: 8 }} wrap>
+            <Button loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('resume_all')}>
+              Resume all
+            </Button>
+            <Button danger loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('suspend_all')}>
+              Suspend all
+            </Button>
+          </Space>
 
-      <Collapse
-        ghost
-        size="small"
-        style={{ marginTop: 8 }}
-        items={[
-          {
-            key: 'attach',
-            label: 'Attach a project…',
-            children: (
-              <Form form={attachForm} layout="vertical" onFinish={handleAttach} size="small">
-                <Form.Item name="project_url" label="Project URL" rules={[{ required: true }]}>
-                  <Input placeholder="https://example.org/project/" />
-                </Form.Item>
-                <Form.Item name="account_key" label="Account key" rules={[{ required: true }]}>
-                  <Input.Password placeholder="from the project's “your account” page" />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={attaching} disabled={attaching}>
-                    Attach
-                  </Button>
-                </Form.Item>
-              </Form>
-            ),
-          },
-        ]}
-      />
+          <Collapse
+            ghost
+            size="small"
+            style={{ marginTop: 8 }}
+            items={[
+              {
+                key: 'attach',
+                label: 'Attach a project…',
+                children: (
+                  <Form form={attachForm} layout="vertical" onFinish={handleAttach} size="small">
+                    <Form.Item name="project_url" label="Project URL" rules={[{ required: true }]}>
+                      <Input placeholder="https://example.org/project/" />
+                    </Form.Item>
+                    <Form.Item name="account_key" label="Account key" rules={[{ required: true }]}>
+                      <Input.Password placeholder="from the project's “your account” page" />
+                    </Form.Item>
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit" loading={attaching} disabled={attaching}>
+                        Attach
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+            ]}
+          />
+        </>
+      )}
     </div>
   )
 }

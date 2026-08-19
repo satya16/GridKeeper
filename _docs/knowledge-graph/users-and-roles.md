@@ -8,8 +8,10 @@ files:
   - hub/app/api/users.py
   - hub/app/api/auth.py
   - hub/app/db.py
-  - hub/frontend/src/pages/UsersPage.jsx
-  - hub/frontend/src/pages/AuditLogPage.jsx
+  - hub/frontend/src/permissions.js
+  - hub/frontend/src/pages/AdminConsolePage.jsx
+  - hub/frontend/src/components/UsersSection.jsx
+  - hub/frontend/src/components/AuditLogSection.jsx
   - hub/frontend/src/pages/ProfilePage.jsx
 relates_to: [hub, data-model, dashboard-ui, credentials, pairing, scheduling, metrics, testing]
 ---
@@ -89,31 +91,64 @@ uniformly), credential create/delete, pairing token minting, and
 discovered-node pairing.
 
 **Frontend**: `LoginForm.jsx` gained a username field. `App.jsx` tracks
-`role` (from `/api/session`'s response) alongside `authenticated`, and
-conditionally shows **Users**/**Audit Log** nav items for admins only; a
-**Profile** page (own username/role/scope + change-password form) is
-visible to everyone. `UsersPage.jsx` is a table + inline create form +
-edit modal, with a `Select` that switches between a group-tags picker
-(group_manager) and a node multi-select (machine_manager) depending on
-the chosen role — still round-trips through the same flat comma-separated
-`scope` string the backend expects.
+`role` (from `/api/session`'s response) alongside `authenticated`. Users
+and Audit Log are both admin-only on the backend, so they share one
+**Admin Console** nav item (`pages/AdminConsolePage.jsx`) with two
+sub-tabs (`components/UsersSection.jsx`, `components/AuditLogSection.jsx`)
+rather than each eating its own top-level slot -- same "one nav item,
+sub-tabs for the pieces that are gated together" pattern as Fleet's
+Discovery/Machines/Schedule. A **Profile** page (own username/role/scope
++ change-password form) is visible to everyone. `UsersSection` is a
+table + inline create form + edit modal, with a `Select` that switches
+between a group-tags picker (group_manager) and a node multi-select
+(machine_manager) depending on the chosen role — still round-trips
+through the same flat comma-separated `scope` string the backend
+expects.
+
+**Every write action is hidden, not just backend-blocked, for a role
+that can't perform it** — added 2026-08-19 as a fast follow once a real
+user pointed out a viewer could still see Start/Stop/Suspend/Attach
+buttons that would just 403 on click. `permissions.js::getPermissions(role)`
+is the single source of truth (mirrors `auth.py`'s rules), returning
+flags like `canWriteNodes`/`canManageCredentials`/`canApplyCredentialToAll`
+that `App.jsx` computes once and threads down through `FleetPage` ->
+`NodeListSection` -> `NodeCard` -> `BoincBlock`/`FahBlock`, and into
+`CredentialsSection`. A viewer now sees pure read-only status (no
+Start/Stop/Suspend/Detach/Attach/Resume/Pause, no group-set button, no
+schedule-edit form, no credential apply/delete/create) while still
+seeing every value; a group_manager/machine_manager loses only the
+options their role can't reach (e.g. "All machines" disappears from the
+credential-apply and fleet-schedule pickers unless admin, "Whole group"
+disappears unless admin/group_manager) — the Fleet page's Discovery and
+Schedule *tabs* are hidden outright for roles with zero function there
+(machine_manager/viewer for Schedule; machine_manager/viewer for
+Discovery, which is admin/group_manager-only on the backend).
 
 **Verified** (2026-08-19, real browser via Playwright against a local
-test instance): admin login shows all six nav items including Users/
-Audit Log/Profile; created a `group_manager` user with scope "Lab 1"
-through the real UI form, confirmed it appears in the users table and in
-the audit log with the correct `detail`; edited that user's role via the
-modal and confirmed the table updated; deleted the user and confirmed
-removal; logged in as that group_manager and confirmed Users/Audit Log
-are absent from their nav (Profile still present), and confirmed a
-direct `fetch('/api/users')` from their session gets a real 403, not
-just a hidden button. Also caught and fixed one real bug this way: the
-Users page's table didn't have `scroll={{ x: true }}`, so it overflowed
+test instance): admin login shows all five nav items including Admin
+Console (with Users/Audit Log sub-tabs) and Profile; created a
+`group_manager` user with scope "Lab 1" through the real UI form,
+confirmed it appears in the users table and in the audit log with the
+correct `detail`; edited that user's role via the modal and confirmed
+the table updated; deleted the user and confirmed removal; logged in as
+that group_manager and confirmed Admin Console is absent from their nav
+(Profile still present), and confirmed a direct `fetch('/api/users')`
+from their session gets a real 403, not just a hidden button. Separately
+verified the viewer-permissions fast-follow: seeded a node with a fake
+BOINC+FAH status via direct DB write (no real BOINC/FAH needed for a
+button-visibility check), confirmed as admin every action control is
+present, then as a fresh `viewer` user confirmed all of them are gone
+(including the group-set button and the credential apply/delete/create
+controls) while the same status values still render, and confirmed a
+direct `POST /api/nodes/{id}/commands` from the viewer's session still
+403s server-side too — the UI hiding is a courtesy, not the actual
+enforcement boundary. Also caught and fixed one real bug this way: the
+Users table didn't have `scroll={{ x: true }}`, so it overflowed
 horizontally at 375px — same class of bug as earlier dashboard-ui mobile
 fixes, same fix. All 93 backend pytest cases pass, including new
 scope-filtering coverage across `test_nodes.py`, `test_credentials.py`,
 `test_pairing.py`, `test_schedule.py`, and a new `test_users.py`.
-Redeployed to the real running `satya16dev/grid-hub` container
+Redeployed twice to the real running `satya16dev/grid-hub` container
 (preserving its `gridkeeper-data` volume) and confirmed `admin`/the
 existing `GRIDKEEPER_ADMIN_PASSWORD` logs in there too, with the
-already-connected real node unaffected by the restart.
+already-connected real node unaffected by either restart.

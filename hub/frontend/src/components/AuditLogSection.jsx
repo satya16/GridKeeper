@@ -1,4 +1,4 @@
-import { Card, Table, Tabs, Typography } from 'antd'
+import { Card, Table, Typography } from 'antd'
 import { api } from '../api.js'
 import { usePolling } from '../usePolling.js'
 
@@ -16,7 +16,7 @@ const columns = [
   },
 ]
 
-function AuditLogSection() {
+export function AuditLogSection() {
   const { data: entries, status } = usePolling(api.listAuditLog, AUDIT_LOG_REFRESH_INTERVAL_MS)
 
   return (
@@ -34,9 +34,4 @@ function AuditLogSection() {
       />
     </Card>
   )
-}
-
-export function AuditLogPage({ tabBarExtraContent }) {
-  const items = [{ key: 'audit-log', label: 'Audit Log', children: <AuditLogSection /> }]
-  return <Tabs items={items} tabBarExtraContent={tabBarExtraContent} />
 }

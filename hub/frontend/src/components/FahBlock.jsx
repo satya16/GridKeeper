@@ -12,7 +12,7 @@ function pct(fraction) {
   return `${Math.round((fraction || 0) * 100)}%`
 }
 
-export function FahBlock({ nodeId, fah, onChanged }) {
+export function FahBlock({ nodeId, fah, canWrite, onChanged }) {
   const [form] = Form.useForm()
 
   if (!fah) return null
@@ -72,54 +72,58 @@ export function FahBlock({ nodeId, fah, onChanged }) {
         <p className="task-row muted">no slots reported</p>
       )}
 
-      <Space style={{ marginTop: 8 }} wrap>
-        <Button onClick={() => run('unpause_all', {})}>Resume all</Button>
-        <Button danger onClick={() => run('pause_all', {})}>
-          Pause all
-        </Button>
-      </Space>
+      {canWrite && (
+        <>
+          <Space style={{ marginTop: 8 }} wrap>
+            <Button onClick={() => run('unpause_all', {})}>Resume all</Button>
+            <Button danger onClick={() => run('pause_all', {})}>
+              Pause all
+            </Button>
+          </Space>
 
-      <Collapse
-        ghost
-        size="small"
-        style={{ marginTop: 8 }}
-        items={[
-          {
-            key: 'config',
-            label: 'Account & cause…',
-            children: (
-              <Form
-                form={form}
-                layout="vertical"
-                size="small"
-                onFinish={handleSave}
-                initialValues={{ cause: account.cause, fold_anon: account.fold_anon }}
-              >
-                <Form.Item name="cause" label="Cause">
-                  <Select options={FAH_CAUSES.map((c) => ({ value: c, label: c }))} />
-                </Form.Item>
-                <Form.Item name="fold_anon" valuePropName="checked">
-                  <Checkbox>Fold anonymously (no account needed)</Checkbox>
-                </Form.Item>
-                <Form.Item name="user" label="Username">
-                  <Input placeholder={account.user} />
-                </Form.Item>
-                <Form.Item name="team" label="Team number">
-                  <InputNumber min={0} style={{ width: '100%' }} placeholder={String(account.team)} />
-                </Form.Item>
-                <Form.Item name="passkey" label="Passkey">
-                  <Input.Password placeholder="from your F@H account page (optional)" />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit">
-                    Save
-                  </Button>
-                </Form.Item>
-              </Form>
-            ),
-          },
-        ]}
-      />
+          <Collapse
+            ghost
+            size="small"
+            style={{ marginTop: 8 }}
+            items={[
+              {
+                key: 'config',
+                label: 'Account & cause…',
+                children: (
+                  <Form
+                    form={form}
+                    layout="vertical"
+                    size="small"
+                    onFinish={handleSave}
+                    initialValues={{ cause: account.cause, fold_anon: account.fold_anon }}
+                  >
+                    <Form.Item name="cause" label="Cause">
+                      <Select options={FAH_CAUSES.map((c) => ({ value: c, label: c }))} />
+                    </Form.Item>
+                    <Form.Item name="fold_anon" valuePropName="checked">
+                      <Checkbox>Fold anonymously (no account needed)</Checkbox>
+                    </Form.Item>
+                    <Form.Item name="user" label="Username">
+                      <Input placeholder={account.user} />
+                    </Form.Item>
+                    <Form.Item name="team" label="Team number">
+                      <InputNumber min={0} style={{ width: '100%' }} placeholder={String(account.team)} />
+                    </Form.Item>
+                    <Form.Item name="passkey" label="Passkey">
+                      <Input.Password placeholder="from your F@H account page (optional)" />
+                    </Form.Item>
+                    <Form.Item>
+                      <Button type="primary" htmlType="submit">
+                        Save
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                ),
+              },
+            ]}
+          />
+        </>
+      )}
     </div>
   )
 }

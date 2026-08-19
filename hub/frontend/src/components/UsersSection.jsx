@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography, message } from 'antd'
+import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
 import { api } from '../api.js'
 import { usePolling } from '../usePolling.js'
 
@@ -89,7 +89,7 @@ function EditUserModal({ user, groups, nodes, onClose, onSaved }) {
   )
 }
 
-function UsersSection({ groups, nodes }) {
+export function UsersSection({ groups, nodes }) {
   const { data: users, status, refresh } = usePolling(api.listUsers, USERS_REFRESH_INTERVAL_MS)
   const [form] = Form.useForm()
   const [createRole, setCreateRole] = useState('viewer')
@@ -194,9 +194,4 @@ function UsersSection({ groups, nodes }) {
       )}
     </Card>
   )
-}
-
-export function UsersPage({ groups, nodes, tabBarExtraContent }) {
-  const items = [{ key: 'users', label: 'Users', children: <UsersSection groups={groups} nodes={nodes} /> }]
-  return <Tabs items={items} tabBarExtraContent={tabBarExtraContent} />
 }

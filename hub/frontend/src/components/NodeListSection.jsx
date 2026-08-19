@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card, Select, Space } from 'antd'
 import { NodeCard } from './NodeCard.jsx'
 
-export function NodeListSection({ nodes, groups, onChanged }) {
+export function NodeListSection({ nodes, groups, canWrite, onChanged }) {
   const [groupFilter, setGroupFilter] = useState('')
   const filtered = groupFilter ? nodes.filter((w) => w.group === groupFilter) : nodes
 
@@ -25,7 +25,7 @@ export function NodeListSection({ nodes, groups, onChanged }) {
       {filtered.length ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))', gap: 16 }}>
           {filtered.map((w) => (
-            <NodeCard key={w.id} node={w} onChanged={onChanged} />
+            <NodeCard key={w.id} node={w} canWrite={canWrite} onChanged={onChanged} />
           ))}
         </div>
       ) : nodes.length ? (
