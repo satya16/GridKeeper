@@ -234,6 +234,51 @@ prop-to-text render of the same JSON), but unconfirmed. `detach_project`
 against this real project also untested — attach only, project left
 attached deliberately since a real account now exists for future testing.
 
+## Found + partially fixed 2026-08-19: repeat attach_project can create real duplicate BOINC entries
+
+Discovered by the user noticing multiple Einstein@Home entries on the
+dashboard — real, not a display bug: `boinccmd --get_project_status`
+showed 3 separate project blocks, same master URL. Root cause: this
+session called `attach_project` to the same project 4 times over several
+minutes (manual attach, then credential single-apply, then
+apply-group, then apply-all while building/testing
+[[grid_manager_credentials_repository]]) — BOINC's own "already
+attached" rejection only fired on the *last* call; the first 3 each
+silently created a separate entry. Cleaned up live with three
+`boinccmd --project <master-url> detach` calls (each detach call only
+removes one matching entry, confirmed empirically -- had to call it
+three times to reach zero).
+
+**Fix:** `attach_project()` now checks `get_status()`'s current project
+list itself before calling `boinccmd --project_attach`, rather than
+trusting BOINC's own dedup (`worker/grid_worker/backends/boinc.py`).
+Verified live: attach once, then immediately attach again with the same
+credential — second call correctly returned `already_attached: true`
+without calling `boinccmd` at all, and the real project count stayed at
+1. `BoincBlock.jsx`'s attach form also gained a loading/disabled guard
+on its submit button (it had been missed when the same pattern was added
+to Start/Stop/Detach earlier the same day), to block the most likely
+real-world trigger (an impatient double-click).
+
+**Known real gap, not fully closed:** the guard compares the literal
+`project_url` string against `get_status()`'s reported project URLs.
+Confirmed live that immediately after a fresh attach, BOINC reports the
+project back using the *exact URL it was given* (`name` still `""`,
+unresolved) — but once BOINC actually resolves the project (fetches its
+master file, gets a real name), the reported URL can flip to a
+*different domain entirely* (here: `einsteinathome.org` →
+`einstein.phys.uwm.edu`, not a subdomain/scheme variant, genuinely
+different registrable domains). A literal-string guard can't catch a
+repeat attach using the original URL once that resolution has already
+happened — which is exactly the gap that let today's original 3
+duplicates through (those calls were minutes apart, plenty of time for
+resolution to complete between them). Closing this fully would mean
+replicating BOINC's own master-file-fetch URL resolution (or tracking
+attach/detach history per (worker, project_url) in the manager's own
+`commands` table) — not done, since the guard as shipped already
+closes the realistic trigger (rapid repeat / accidental double-submit)
+and the remaining gap needs a deliberate, spaced-out repeat to hit.
+
 ## Added 2026-08-19: `cpu_suspend_reason` field
 
 After attaching, the user asked why CPU usage wasn't going up — turned

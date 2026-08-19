@@ -163,7 +163,22 @@ def attach_project(project_url: str, account_key: str) -> dict:
     project's "your account" web page, or via --lookup_account) -- a
     long-lived credential, not a one-time thing like a pairing token.
     Callers (manager/app/api/workers.py) must not persist it in plaintext
-    -- see that module's payload redaction."""
+    -- see that module's payload redaction.
+
+    Checks current status before calling boinccmd rather than trusting
+    BOINC's own "already attached" rejection -- confirmed live
+    2026-08-19 that it isn't reliable: three separate --project_attach
+    calls to the same project, minutes apart, each silently created a
+    *separate* project entry instead of being rejected; only a fourth
+    call shortly after the third actually got BOINC's real "Already
+    attached to project" error. Root cause not fully pinned down (BOINC
+    resolves the given URL to a canonical master URL during attach,
+    which may be part of why its own dedup check isn't synchronous/
+    reliable) -- this guard sidesteps needing to understand that, by
+    never re-issuing the command at all once our own state already
+    shows this exact project_url attached."""
+    if any(p["url"] == project_url for p in get_status()["projects"]):
+        return {"project_url": project_url, "attached": True, "already_attached": True}
     _run("--project_attach", project_url, account_key)
     return {"project_url": project_url, "attached": True}
 

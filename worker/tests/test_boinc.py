@@ -182,11 +182,29 @@ def test_suspend_project_calls_boinccmd_correctly(monkeypatch):
 
 
 def test_attach_project_calls_boinccmd_correctly(monkeypatch):
+    monkeypatch.setattr(boinc, "get_status", lambda: {"projects": [], "tasks": []})
     calls = []
     monkeypatch.setattr(boinc, "_run", lambda *args: calls.append(args))
     result = boinc.attach_project("https://example.org/project/", "abc123authenticator")
     assert calls == [("--project_attach", "https://example.org/project/", "abc123authenticator")]
     assert result == {"project_url": "https://example.org/project/", "attached": True}
+
+
+def test_attach_project_skips_call_when_already_attached(monkeypatch):
+    """Guards against a real BOINC quirk confirmed live 2026-08-19: a
+    repeat --project_attach call for an already-attached project isn't
+    reliably rejected by BOINC itself, and can silently create a
+    duplicate project entry instead."""
+    monkeypatch.setattr(
+        boinc,
+        "get_status",
+        lambda: {"projects": [{"url": "https://example.org/project/", "name": "Example", "suspended": False}], "tasks": []},
+    )
+    calls = []
+    monkeypatch.setattr(boinc, "_run", lambda *args: calls.append(args))
+    result = boinc.attach_project("https://example.org/project/", "abc123authenticator")
+    assert calls == []
+    assert result == {"project_url": "https://example.org/project/", "attached": True, "already_attached": True}
 
 
 def test_detach_project_calls_boinccmd_correctly(monkeypatch):

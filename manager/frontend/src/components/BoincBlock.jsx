@@ -12,8 +12,13 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
   // back (or a 15s timeout) -- these track "is that wait still in flight"
   // so buttons can disable/spin rather than let a fast double-click (e.g.
   // Start while Stop hasn't resolved yet) race against stale local state.
+  // attaching specifically also guards against a real BOINC quirk
+  // (confirmed live 2026-08-19): a repeat attach_project call isn't
+  // reliably rejected by BOINC itself and can create a genuine duplicate
+  // project entry -- see worker/grid_worker/backends/boinc.py.
   const [pendingProjects, setPendingProjects] = useState(new Set())
   const [pendingAll, setPendingAll] = useState(false)
+  const [attaching, setAttaching] = useState(false)
 
   if (!boinc) return null
 
@@ -60,8 +65,13 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
   }
 
   const handleAttach = async (values) => {
-    await run('attach_project', { project_url: values.project_url.trim(), account_key: values.account_key.trim() })
-    attachForm.resetFields()
+    setAttaching(true)
+    try {
+      await run('attach_project', { project_url: values.project_url.trim(), account_key: values.account_key.trim() })
+      attachForm.resetFields()
+    } finally {
+      setAttaching(false)
+    }
   }
 
   return (
@@ -142,7 +152,7 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
                   <Input.Password placeholder="from the project's “your account” page" />
                 </Form.Item>
                 <Form.Item>
-                  <Button type="primary" htmlType="submit">
+                  <Button type="primary" htmlType="submit" loading={attaching} disabled={attaching}>
                     Attach
                   </Button>
                 </Form.Item>
