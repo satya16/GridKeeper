@@ -68,7 +68,13 @@ def _parse_blocks(text: str) -> dict[str, list[dict[str, str]]]:
             continue
         if current_block is not None and ":" in line:
             key, _, value = line.strip().partition(":")
-            current_block[key.strip()] = value.strip()
+            # first-occurrence wins: a project block's top-level fields (name,
+            # master URL, ...) come before its nested "GUI URL:" sub-entries,
+            # which repeat field names like "name"/"URL" for the link itself --
+            # confirmed live 2026-08-18 against Einstein@Home, where the last
+            # GUI URL's name ("GEO600 project") was clobbering the real
+            # project name before this fix (see knowledge-graph/boinc-backend.md)
+            current_block.setdefault(key.strip(), value.strip())
     return sections
 
 
@@ -86,8 +92,8 @@ def get_status() -> dict:
     for p in blocks.get("Projects", []):
         projects.append(
             {
-                "url": p.get("manager URL", ""),
-                "name": p.get("name", p.get("manager URL", "unknown")),
+                "url": p.get("master URL", ""),
+                "name": p.get("name", p.get("master URL", "unknown")),
                 "suspended": p.get("suspended via GUI", "no").lower() == "yes",
             }
         )

@@ -8,6 +8,14 @@ SAMPLE_GUI_INFO = """
    name: World Community Grid
    master URL: https://www.worldcommunitygrid.org/
    suspended via GUI: no
+GUI URL:
+   name: Your account
+   description: View and modify your account profile
+   URL: https://www.worldcommunitygrid.org/account
+GUI URL:
+   name: GEO600 project
+   description: The home page of the GEO600 project
+   URL: http://www.geo600.org
 2) -----------
    name: Rosetta@home
    master URL: https://boinc.bakerlab.org/rosetta/
@@ -54,7 +62,11 @@ Network status
 def test_parse_blocks_projects():
     blocks = boinc._parse_blocks(SAMPLE_GUI_INFO)
     assert len(blocks["Projects"]) == 2
+    # project 1's nested "GUI URL:" sub-entries repeat the "name" key for the
+    # link itself (e.g. "GEO600 project") -- must not clobber the real
+    # project-level name, confirmed live 2026-08-18 against Einstein@Home
     assert blocks["Projects"][0]["name"] == "World Community Grid"
+    assert blocks["Projects"][0]["master URL"] == "https://www.worldcommunitygrid.org/"
     assert blocks["Projects"][0]["suspended via GUI"] == "no"
     assert blocks["Projects"][1]["suspended via GUI"] == "yes"
 
@@ -98,7 +110,10 @@ def test_get_status_end_to_end(monkeypatch):
 
     assert status["run_mode"] == "according to prefs"
     assert len(status["projects"]) == 2
+    assert status["projects"][0]["name"] == "World Community Grid"
+    assert status["projects"][0]["url"] == "https://www.worldcommunitygrid.org/"
     assert status["projects"][0]["suspended"] is False
+    assert status["projects"][1]["url"] == "https://boinc.bakerlab.org/rosetta/"
     assert status["projects"][1]["suspended"] is True
     assert len(status["tasks"]) == 2
     assert status["tasks"][0]["fraction_done"] == 0.482913

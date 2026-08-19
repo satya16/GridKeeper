@@ -178,15 +178,58 @@ Test fixtures in `worker/tests/test_boinc.py` (`SAMPLE_CC_STATUS`)
 replaced with the real captured output rather than the invented format
 that was there before.
 
-**Still not verified**, since it needs real BOINC-project credentials
-this machine doesn't have (see [[grid_manager_boinc_attach_detach]]):
-`attach_project`/`detach_project` against a real project, and by
-extension the `Projects`/`Tasks` block-parsing in `get_status()` against
-real (non-empty) data — `_parse_blocks()`'s field names
-(`"manager URL"`, `"suspended via GUI"`, `"active_task_state"`, etc.)
-are still exactly as originally written from documentation/memory, never
-checked against real output. `apply_schedule()`'s
-`global_prefs_override.xml` effect on real Activity behavior is also
-still unverified. Given the daemon now actually works, these are all
-newly *reachable* to verify, just not yet done — the real blocker was
-never these, it was the daemon being unusable at all.
+**`apply_schedule()`'s `global_prefs_override.xml` effect on real Activity
+behavior is still unverified.**
+
+## RESOLVED 2026-08-19: attach_project verified against a real project, two real parsing bugs found+fixed
+
+Signed up for a real Einstein@Home account and attached it through the
+dashboard's "Attach a project…" form (`POST
+/api/workers/{id}/commands`, `attach_project`), end to end — real
+account key, real WebSocket dispatch, real `boinccmd --project_attach`.
+`boinccmd --get_project_status` on the worker machine confirmed the
+attach succeeded (real `master URL`, scheduler RPC completed). Also
+confirmed live: the manager's redaction — `POST .../commands`'s response
+echoed `account_key` as `"***redacted***"` even though the real key
+reached the worker.
+
+But the *dashboard's* view of the attached project was wrong — found by
+actually looking at the parsed output, not just checking "did attach
+return ok":
+
+1. **`get_status()` used the wrong field name.** It read `p.get("manager
+   URL", ...)`, but real `boinccmd --get_simple_gui_info` output calls
+   the field `"master URL"` — so `projects[].url` was always `""`. The
+   test fixture (`SAMPLE_GUI_INFO` in `worker/tests/test_boinc.py`)
+   already had the *correct* key, but no test ever asserted
+   `status["projects"][0]["url"]`, only `name`/`suspended` — that
+   coverage gap is exactly how this shipped unnoticed.
+2. **`_parse_blocks()` clobbered project names.** Real project blocks
+   contain nested `GUI URL:` sub-entries (links to the project's FAQ,
+   account page, etc.) that reuse field names like `"name"` and `"URL"`
+   for the link itself. The parser didn't treat those as nested — it
+   just kept overwriting `current_block["name"]` line by line, so by the
+   end of the block, `name` held the *last* GUI URL's label (observed:
+   `"GEO600 project"`) instead of the real project name
+   (`"Einstein@Home"`). The old `SAMPLE_GUI_INFO` fixture had no nested
+   `GUI URL:` entries at all, so this had no way to surface in tests
+   either.
+
+Fixed both: `_parse_blocks()` now uses `setdefault` instead of plain
+assignment (first-occurrence wins — project-level fields are always
+written before any nested `GUI URL:` sub-entry repeats those key names),
+and `get_status()` now reads `"master URL"`. `SAMPLE_GUI_INFO` updated
+with real nested `GUI URL:` entries (captured from live Einstein@Home
+output), and both `test_parse_blocks_projects` and
+`test_get_status_end_to_end` now assert on `url`/`master URL` so a
+regression here would fail loudly. Re-verified against the live daemon
+after the fix: dashboard now correctly reports
+`{"url": "https://einstein.phys.uwm.edu/", "name": "Einstein@Home"}`.
+
+**Still not independently verified:** the dashboard's React rendering of
+this data in an actual browser (`BoincBlock.jsx`) — no browser tooling
+was available this session, so this was confirmed only via the REST API
+response, not by looking at the rendered page. Low risk (it's a direct
+prop-to-text render of the same JSON), but unconfirmed. `detach_project`
+against this real project also untested — attach only, project left
+attached deliberately since a real account now exists for future testing.
