@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Input, Button, Space, message } from 'antd'
+import { Alert, Button, Card, Input, Space, message } from 'antd'
 import { api } from '../api.js'
 import { usePolling } from '../usePolling.js'
 
@@ -46,14 +46,51 @@ function DiscoveryCard({ node, onPaired }) {
 export function DiscoverySection({ onPaired }) {
   const { data, status, refresh } = usePolling(api.listDiscovered, DISCOVERY_REFRESH_INTERVAL_MS)
   const nodes = data || []
+  const [banner, setBanner] = useState(null)
 
   const handlePaired = () => {
     refresh()
     onPaired()
   }
 
+  const handleNewToken = async () => {
+    const label = window.prompt('Label for this machine (optional):', '') || ''
+    const group = window.prompt('Group for this machine (e.g. "Lab 1"; optional):', '') || ''
+    try {
+      const { token } = await api.createPairingToken(label, group)
+      setBanner({ token, label, group })
+    } catch (err) {
+      window.alert(`Failed to create pairing token: ${err.message}`)
+    }
+  }
+
   return (
-    <Card title="Discovered on your network" extra={<span className="muted">{status}</span>}>
+    <Card
+      title="Discovered on your network"
+      extra={<span className="muted">{status}</span>}
+    >
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Button type="primary" onClick={handleNewToken}>
+          New pairing token
+        </Button>
+      </Space>
+
+      {banner && (
+        <Alert
+          type="info"
+          closable
+          onClose={() => setBanner(null)}
+          style={{ marginBottom: 12 }}
+          message={
+            <span>
+              Pairing token (use once, on the new machine){banner.group ? ` — group "${banner.group}"` : ''}: <code>{banner.token}</code>
+              <br />
+              Run: <code>grid-node enroll --hub &lt;hub-url&gt; --token {banner.token} --name "{banner.label || 'my-machine'}"</code>
+            </span>
+          }
+        />
+      )}
+
       {nodes.length ? (
         <Space wrap size="middle" align="start">
           {nodes.map((w) => (

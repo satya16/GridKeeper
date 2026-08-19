@@ -38,6 +38,38 @@ matching the old dashboard.js's separate `setInterval` loops. Sections:
 [boinc-backend](boinc-backend.md) / [fah-backend](fah-backend.md)), and
 `MetricsSection.jsx` + `LineChart.jsx` (see [metrics](metrics.md)).
 
+**Multi-page nav added 2026-08-19** (was one long scrolling page — user
+request, once there were enough sections to want to jump between them
+directly): `App.jsx` now renders an antd `Layout` with a `Layout.Sider`
++ `Menu` (Fleet / Credentials / Metrics, in that order, plain `page`
+React state -- no router library, not needed for a single login-gated
+page with nothing to deep-link). `pages/FleetPage.jsx` further splits
+into its own `Tabs`: Discovery, Machines, Schedule. "New pairing token"
+moved from the old global `Header.jsx` into `DiscoverySection.jsx`
+itself, since it's pairing-specific, not a global action — `Header.jsx`
+is now just the persistent top bar (hamburger toggle, title, logout).
+
+Real bug found via Playwright, not guessed: `Layout.Sider`'s
+`breakpoint` prop only auto-*shrinks* its width at that viewport size --
+reading `node_modules/antd/es/layout/style/sider.js` confirms it's
+`position: relative` unconditionally, so it does NOT become an overlay
+on its own. Opening the sider on a narrow screen therefore pushed page
+content sideways off-viewport (real horizontal overflow, caught by the
+same 375px Playwright pass from the mobile-layout fix below) rather
+than floating over it like a normal mobile nav drawer. Fixed with a
+media-query override (`App.css`, `max-width: 767px`) making
+`.ant-layout-sider` `position: fixed` + a click-to-dismiss backdrop
+(`.sider-backdrop`, rendered by `App.jsx`) below that width; picking a
+menu item also auto-closes the sider below the same breakpoint
+(`MOBILE_BREAKPOINT_PX` in `App.jsx`, kept in sync with the CSS value
+by comment, not by a shared constant -- small enough surface that
+splitting it into a shared file wasn't worth it). Verified in both
+states (collapsed and open-as-overlay) at 375px and at 1400px desktop
+via Playwright screenshots -- no horizontal overflow either way, sider
+correctly floats over content rather than pushing it, real production
+node data (a real attached BOINC project, real FAH slot) renders
+correctly on the Machines tab post-restructure.
+
 `BoincBlock` has a "Detach" button per project (confirm-gated via
 `window.confirm()`) and a collapsed "Attach a project…" `Form` (project
 URL + password-masked account key). `FahBlock` shows current

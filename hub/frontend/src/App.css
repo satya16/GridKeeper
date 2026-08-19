@@ -154,8 +154,9 @@
   cursor: not-allowed;
 }
 
-.app-shell {
+.app-content {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -172,7 +173,7 @@
    confirmed against antd's actual source, not guessed. Desktop is
    untouched; this only changes anything once the row genuinely can't fit. */
 @media (max-width: 640px) {
-  .app-shell {
+  .app-content {
     padding: 0.75rem;
     gap: 1rem;
   }
@@ -182,6 +183,35 @@
   }
   .ant-card-extra {
     margin-inline-start: 0;
+  }
+}
+
+/* Layout.Sider is `position: relative` unconditionally in antd (checked
+   node_modules/antd/es/layout/style/sider.js) -- its `breakpoint` prop
+   only auto-shrinks its width, it does NOT turn it into an overlay. Left
+   as the default, opening it on a narrow screen pushes page content
+   sideways off the viewport instead of floating over it (a real bug,
+   found via Playwright at 375px, not guessed). Below the breakpoint
+   matching MOBILE_BREAKPOINT_PX in App.jsx, make it a fixed full-height
+   overlay instead, with a backdrop (rendered by App.jsx) to dismiss it. */
+.sider-backdrop {
+  display: none;
+}
+@media (max-width: 767px) {
+  .ant-layout-sider {
+    position: fixed;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 100;
+  }
+  .sider-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
   }
 }
 
