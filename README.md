@@ -15,7 +15,36 @@ How to test it (automated suite + manual checklist): [`docs/TESTING.md`](docs/TE
 
 ## Quickstart
 
-Terminal 1 -- hub:
+Both paths need `GRIDKEEPER_ADMIN_PASSWORD` (any username works with the
+dashboard's login, this is the password) and, to use the dashboard's
+"Saved BOINC account keys" panel, `GRIDKEEPER_SECRET_KEY` (encrypts
+saved keys at rest -- everything else works without it, but saving a new
+key will fail). Generate one with:
+
+```bash
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Keep that value somewhere safe and reuse it across restarts -- losing it
+makes any keys already saved unrecoverable (by design: the hub only ever
+stores them encrypted, never in plaintext).
+
+Easiest: the published Docker image, no repo checkout or frontend build
+needed. The `-v` volume is where `grid.db` (nodes, credentials,
+everything) actually lives -- without it, data vanishes if the container
+gets removed and recreated:
+
+```bash
+docker run -d -p 8000:8000 \
+  -e GRIDKEEPER_ADMIN_PASSWORD=changeme \
+  -e GRIDKEEPER_SECRET_KEY=<the value you generated above> \
+  -v gridkeeper-data:/data \
+  satya16dev/grid-hub:latest
+```
+
+Working from a repo checkout instead -- e.g. to run a local change (see
+[`hub/frontend/README`](hub/frontend/README.md) for dev-mode/hot-reload
+instead of a full rebuild per change):
 
 ```bash
 cd hub
@@ -24,28 +53,14 @@ pip install -r requirements.txt
 
 cd frontend && npm install && npm run build && cd ..   # builds the React+Ant Design dashboard into app/static/dist/
 
-export GRIDKEEPER_ADMIN_PASSWORD=changeme   # set your own
+export GRIDKEEPER_ADMIN_PASSWORD=changeme
+export GRIDKEEPER_SECRET_KEY=<the value you generated above>
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-To save BOINC project account keys and re-apply them to any machine from
-the dashboard instead of pasting a key into each machine's attach form,
-also set `GRIDKEEPER_SECRET_KEY` (used to encrypt saved keys at rest --
-without it, everything else works, but the dashboard's "Saved BOINC
-account keys" panel will fail to save a new key):
-
-```bash
-export GRIDKEEPER_SECRET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-```
-
-Keep this value somewhere safe -- losing it makes any keys already saved
-unrecoverable (by design: the hub only ever stores them encrypted,
-never in plaintext).
-
-The frontend build step is only needed once (or after pulling frontend
-changes) -- `app/static/dist/` isn't committed, same as any other build
-output; see [`hub/frontend/README`](hub/frontend/README.md) for
-dev-mode (hot reload) instead of a full rebuild per change.
+(`app/static/dist/` isn't committed, same as any other build output --
+the frontend build step above is only needed once, or after pulling
+frontend changes.)
 
 Open the dashboard using the hub machine's **LAN IP**, not
 `localhost` (e.g. `http://192.168.1.5:8000`) -- when you pair a node,
@@ -54,18 +69,19 @@ the node knows where to connect for its normal WebSocket session; if
 that was `localhost`, a *different* machine would be told to connect to
 itself. (Or set `GRIDKEEPER_PUBLIC_URL` on the hub to pin this
 explicitly, e.g. in the systemd/env config for a real deployment.)
-Any username works, password = `GRIDKEEPER_ADMIN_PASSWORD`.
 
 Terminal 2 -- node (on the machine you want to manage -- this can be a
 different machine on the LAN, or **the same machine the hub is running
-on**; see below):
+on**; see below). `grid-node` is [published on PyPI](https://pypi.org/project/grid-node/),
+so no repo checkout is needed on this machine at all:
 
 ```bash
-cd node
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
+pipx install grid-node   # or: pip install grid-node
 grid-node run
 ```
+
+(Working from a repo checkout instead -- e.g. to run a local change --
+see [`node/README.md`](node/README.md) for the `pip install -e .` path.)
 
 It'll print a 6-digit pairing code and advertise itself on the LAN. Within
 a few seconds it shows up on the dashboard under "Discovered on your
@@ -93,11 +109,13 @@ just happens to resolve to `localhost`.
 
 Two things worth knowing for this setup specifically:
 
-- **Separate virtualenvs, same machine.** `hub/` and `node/` have
-  different dependency sets (FastAPI/SQLAlchemy/httpx vs.
-  websockets/zeroconf/psutil) with some overlap -- keep them in their own
-  `.venv` each, as in the Quickstart above, rather than trying to share
-  one.
+- **If running both from a repo checkout, keep separate virtualenvs.**
+  `hub/` and `node/` have different dependency sets (FastAPI/SQLAlchemy/
+  httpx vs. websockets/zeroconf/psutil) with some overlap -- keep them
+  in their own `.venv` each rather than trying to share one. Doesn't
+  apply if the hub's running via Docker and the node via `pipx install
+  grid-node`, as in the Quickstart above -- there's no shared environment
+  to conflict in the first place.
 - **Skip LAN discovery, use the manual token instead.** LAN
   discovery/mDNS pairing works fine on a single machine too (multicast
   loopback is enabled by default on Linux), but it's solving a problem
@@ -106,7 +124,7 @@ Two things worth knowing for this setup specifically:
 
   ```bash
   # dashboard -> "New pairing token" -> copy the token, then:
-  cd node && grid-node enroll --hub http://localhost:8000 --token <token> --name "$(hostname)-local"
+  grid-node enroll --hub http://localhost:8000 --token <token> --name "$(hostname)-local"
   grid-node run
   ```
 
@@ -118,25 +136,25 @@ box required.
 
 ## Status
 
-v1 is functionally complete and has passed a first real smoke test
-(2026-08-11, local): hub boot, auth, all REST endpoints, both
-pairing flows (**including LAN/mDNS discovery, which worked end to end
-on the first attempt**), the full node↔hub WebSocket protocol,
-node restart/reconnect with schedule-policy persistence, and live
-`psutil` metrics collection all confirmed working. One real bug found
-and fixed along the way (a node-name override during LAN pairing
-wasn't propagated back to the node's own config). Full per-component
-detail: [`knowledge-graph/`](knowledge-graph/).
+v1 is functionally complete, and most of it has now been verified
+against real, running BOINC/FAH installs and real project accounts, not
+just mocked tests -- core system + LAN pairing (2026-08-11), FAH control
+(2026-08-18), BOINC control including a real project attach and a
+credential-repository feature for reusing one account key across
+machines (2026-08-19). Full per-component detail, including exactly
+what's automated-tested vs. manually verified vs. still open:
+[`knowledge-graph/`](knowledge-graph/) -- that's the authoritative,
+kept-current record; this section is a summary, not a substitute for it.
 
-**Still open** (the smoke test ran on a machine with no BOINC/FAH
-installed and no display):
-- Actual BOINC/FAH command execution and `apply_schedule()` against a
-  real install -- only the graceful-failure path was confirmed.
-- The dashboard's client-side JS/charts in an actual browser.
+**Still open:**
+- The dashboard's client-side JS/charts in an actual browser -- verified
+  via its real REST API responses, not by looking at the rendered page.
 - LAN pairing across two genuinely separate machines, not one host
   talking to itself.
+- `apply_schedule()`'s real effect on BOINC's Activity behavior over
+  time (the underlying `boinccmd` calls are verified, a live schedule
+  boundary hasn't been watched being crossed).
 
-Not yet done: TLS termination guidance for real deployments,
-macOS/Windows node packaging, GPU utilization reporting, and
-machine grouping / bulk pairing for larger deployments -- see "Open
+Not yet done: TLS termination guidance for real deployments, macOS/
+Windows node packaging, and GPU utilization reporting -- see "Open
 questions" in the requirements doc.
