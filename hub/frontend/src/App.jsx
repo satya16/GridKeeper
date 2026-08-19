@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Layout, Menu } from 'antd'
+import { Layout, Menu, Typography } from 'antd'
 import { api, setUnauthorizedHandler } from './api.js'
 import { usePolling } from './usePolling.js'
 import { Header } from './components/Header.jsx'
@@ -78,6 +78,16 @@ export default function App() {
         breakpoint="lg"
         collapsedWidth={0}
       >
+        {/* "Logo" block, same height as the content-side Header so the two
+            align -- the standard admin-layout pattern (Ant Design Pro's own
+            reference layout does exactly this): brand in the sider's own
+            top-left corner, above the nav, collapse trigger lives in the
+            main header instead. */}
+        <div className="sider-brand">
+          <Typography.Title level={4} style={{ margin: 0, color: 'inherit', whiteSpace: 'nowrap' }}>
+            GridKeeper
+          </Typography.Title>
+        </div>
         <Menu
           mode="inline"
           style={{ height: '100%' }}

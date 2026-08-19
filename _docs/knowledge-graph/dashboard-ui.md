@@ -70,6 +70,16 @@ correctly floats over content rather than pushing it, real production
 node data (a real attached BOINC project, real FAH slot) renders
 correctly on the Machines tab post-restructure.
 
+**Brand moved into the sider 2026-08-19** (same day, follow-up): "GridKeeper"
+now sits in the `Sider`'s own top-left corner (`.sider-brand` in
+`App.css`, height-matched to `Layout.Header`'s default 64px so the two
+rows align), above the nav `Menu`, instead of in the content-side
+header -- the standard admin-layout pattern (Ant Design Pro's own
+reference layout does exactly this). `Header.jsx` is now just the
+hamburger toggle + logout, title removed. Worth remembering: "hub" here
+means this component's *role* (vs. node), not a rename of the product
+-- the brand shown is still "GridKeeper", not "GridHub".
+
 `BoincBlock` has a "Detach" button per project (confirm-gated via
 `window.confirm()`) and a collapsed "Attach a project…" `Form` (project
 URL + password-masked account key). `FahBlock` shows current

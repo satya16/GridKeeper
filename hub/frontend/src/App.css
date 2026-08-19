@@ -186,6 +186,16 @@
   }
 }
 
+.sider-brand {
+  height: 64px; /* matches antd's default Layout.Header height, for alignment */
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  overflow: hidden;
+  color: #e6e8eb;
+  border-bottom: 1px solid #2a2e38;
+}
+
 /* Layout.Sider is `position: relative` unconditionally in antd (checked
    node_modules/antd/es/layout/style/sider.js) -- its `breakpoint` prop
    only auto-shrinks its width, it does NOT turn it into an overlay. Left
