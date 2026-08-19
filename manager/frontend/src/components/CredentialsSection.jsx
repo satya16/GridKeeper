@@ -5,19 +5,45 @@ import { usePolling } from '../usePolling.js'
 
 const CREDENTIALS_REFRESH_INTERVAL_MS = 10000
 
-function CredentialRow({ credential, workers, onChanged, onWorkerChanged }) {
-  const [workerId, setWorkerId] = useState()
+function summarizeBulkResults(results) {
+  const applied = results.filter((r) => r.online).length
+  const skipped = results.length - applied
+  const failed = results.filter((r) => r.online && r.status !== 'ok').length
+  let msg = `Applied to ${applied}/${results.length} machine(s)`
+  if (skipped) msg += `, ${skipped} offline (skipped)`
+  if (failed) msg += `, ${failed} failed`
+  return msg
+}
+
+function CredentialRow({ credential, workers, groups, onChanged, onWorkerChanged }) {
+  const [target, setTarget] = useState()
   const [applying, setApplying] = useState(false)
 
+  const targetOptions = [
+    { label: 'All machines', options: [{ value: 'all', label: 'All machines' }] },
+    ...(groups.length
+      ? [{ label: 'Whole group', options: groups.map((g) => ({ value: `group:${g}`, label: g })) }]
+      : []),
+    { label: 'Just one machine', options: workers.map((w) => ({ value: `worker:${w.id}`, label: w.name })) },
+  ]
+
   const handleApply = async () => {
-    if (!workerId) return
+    if (!target) return
     setApplying(true)
     try {
-      const result = await api.applyCredential(credential.id, workerId)
-      if (result.status !== 'ok') {
-        message.warning(`Apply finished with status "${result.status}": ${JSON.stringify(result.result)}`)
+      if (target === 'all') {
+        message.info(summarizeBulkResults(await api.applyCredentialToAll(credential.id)))
+      } else if (target.startsWith('group:')) {
+        const group = target.slice('group:'.length)
+        message.info(summarizeBulkResults(await api.applyCredentialToGroup(credential.id, group)))
       } else {
-        message.success(`Applied '${credential.name}' to the selected machine.`)
+        const workerId = target.slice('worker:'.length)
+        const result = await api.applyCredential(credential.id, workerId)
+        if (result.status !== 'ok') {
+          message.warning(`Apply finished with status "${result.status}": ${JSON.stringify(result.result)}`)
+        } else {
+          message.success(`Applied '${credential.name}' to the selected machine.`)
+        }
       }
       onChanged()
       onWorkerChanged()
@@ -50,13 +76,13 @@ function CredentialRow({ credential, workers, onChanged, onWorkerChanged }) {
       <Space size="small">
         <Select
           size="small"
-          style={{ minWidth: 160 }}
-          placeholder="Apply to machine…"
-          value={workerId}
-          onChange={setWorkerId}
-          options={workers.map((w) => ({ value: w.id, label: w.name }))}
+          style={{ minWidth: 200 }}
+          placeholder="Apply to…"
+          value={target}
+          onChange={setTarget}
+          options={targetOptions}
         />
-        <Button size="small" type="primary" loading={applying} disabled={applying || !workerId} onClick={handleApply}>
+        <Button size="small" type="primary" loading={applying} disabled={applying || !target} onClick={handleApply}>
           Apply
         </Button>
         <Button size="small" danger onClick={handleDelete}>
@@ -67,7 +93,7 @@ function CredentialRow({ credential, workers, onChanged, onWorkerChanged }) {
   )
 }
 
-export function CredentialsSection({ workers, onWorkerChanged }) {
+export function CredentialsSection({ workers, groups, onWorkerChanged }) {
   const { data: credentials, status, refresh } = usePolling(api.listCredentials, CREDENTIALS_REFRESH_INTERVAL_MS)
   const [form] = Form.useForm()
 
@@ -94,7 +120,14 @@ export function CredentialsSection({ workers, onWorkerChanged }) {
 
       {credentials && credentials.length ? (
         credentials.map((c) => (
-          <CredentialRow key={c.id} credential={c} workers={workers} onChanged={refresh} onWorkerChanged={onWorkerChanged} />
+          <CredentialRow
+            key={c.id}
+            credential={c}
+            workers={workers}
+            groups={groups}
+            onChanged={refresh}
+            onWorkerChanged={onWorkerChanged}
+          />
         ))
       ) : (
         <p className="task-row muted">No saved credentials yet.</p>

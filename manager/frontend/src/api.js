@@ -58,4 +58,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ worker_id: workerId }),
     }),
+  applyCredentialToGroup: (credentialId, group) =>
+    request(`/api/credentials/${encodeURIComponent(credentialId)}/apply-group/${encodeURIComponent(group)}`, {
+      method: 'POST',
+    }),
+  applyCredentialToAll: (credentialId) =>
+    request(`/api/credentials/${encodeURIComponent(credentialId)}/apply-all`, { method: 'POST' }),
 }

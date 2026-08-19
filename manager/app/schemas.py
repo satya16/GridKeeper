@@ -99,6 +99,14 @@ class CredentialApplyRequest(BaseModel):
     worker_id: str
 
 
+class CredentialApplyResult(BaseModel):
+    worker_id: str
+    worker_name: str
+    online: bool
+    status: str
+    result: dict[str, Any] | None
+
+
 class CommandOut(BaseModel):
     id: str
     worker_id: str

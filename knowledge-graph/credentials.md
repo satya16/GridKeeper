@@ -56,12 +56,41 @@ exactly like a direct attach, and confirmed `last_used_at` updated.
 delete/apply, duplicate-name rejection, 404s, the offline-worker 409,
 redaction, and the "no `GRIDKEEPER_SECRET_KEY` configured" 500 path.
 
-**Deliberately out of scope for this pass**: fleet/group-wide apply
-(`apply` only takes one `worker_id`) — the user explicitly asked for
-single-worker apply first, group fan-out as an explicit follow-up, given
-`Worker.group` (`data-model.md`) already exists and is the natural
-target for it. Also out of scope: FAH credentials (`passkey`) — this
-repository's shape (`project_url` + one key) matches BOINC's
-`attach_project` specifically and wasn't generalized to FAH's rather
-different `set_config` payload, since there was no concrete need for it
-yet.
+Also out of scope: FAH credentials (`passkey`) — this repository's shape
+(`project_url` + one key) matches BOINC's `attach_project` specifically
+and wasn't generalized to FAH's rather different `set_config` payload,
+since there was no concrete need for it yet.
+
+## Added 2026-08-19 (same day, second pass): group/fleet-wide apply
+
+`POST /api/credentials/{id}/apply-group/{group}` and
+`POST /api/credentials/{id}/apply-all`, mirroring `schedule.py`'s
+`apply-group`/`apply-all` naming and "unknown/empty group matches no
+workers rather than erroring" philosophy. One real difference from the
+schedule case: a schedule policy is *persisted state* pushed to a worker
+the next time it connects, so an offline worker still "gets" it
+eventually; `attach_project` is a one-shot command with nothing to
+persist for later, so an offline worker in the batch is reported as
+`{"online": false, "status": "skipped"}` rather than erroring out the
+whole batch or silently pretending it succeeded (`_apply_to_workers()`
+in `credentials.py`). The single-worker `/apply` endpoint deliberately
+keeps its original strict 404/409 behavior rather than being unified
+with this tolerant one — picking one specific machine is a different
+intent than fanning out across a mixed-availability fleet.
+
+Dashboard: each saved credential's row now has one target picker (single
+machine / whole group / all machines) instead of a bare worker dropdown,
+backed by `manager/frontend/src/api.js`'s `applyCredentialToGroup`/
+`applyCredentialToAll`.
+
+**Verified live** against the real enrolled worker (grouped as "My
+Laptop Lab"): `apply-group` on that group attached successfully
+(`status: "ok"`), `apply-group` on a nonexistent group correctly
+returned `[]`, and a follow-up `apply-all` call — since the project was
+already attached from the prior call — correctly surfaced BOINC's real
+`"Already attached to project"` error through the per-worker result
+(`status: "error"`) rather than crashing the batch. 8 new tests in
+`manager/tests/test_credentials.py` cover group fan-out with a mixed
+online/offline group, group scoping (a worker in a different group isn't
+touched), unknown group/credential, apply-all, and that an all-offline
+batch doesn't decrypt the key or bump `last_used_at` for a no-op.

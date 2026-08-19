@@ -25,7 +25,7 @@ export default function App() {
       <Header />
       <DiscoverySection onPaired={onChanged} />
       <FleetScheduleSection groups={groups || []} onApplied={onChanged} />
-      <CredentialsSection workers={workers || []} onWorkerChanged={refreshWorkers} />
+      <CredentialsSection workers={workers || []} groups={groups || []} onWorkerChanged={refreshWorkers} />
       <WorkerListSection workers={workers || []} groups={groups || []} onChanged={onChanged} />
       <MetricsSection />
     </div>
