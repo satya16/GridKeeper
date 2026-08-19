@@ -240,3 +240,25 @@ screenshot taken during an active CSS transition can occasionally
 capture a stale paint frame, so a surprising screenshot result during
 verification is worth double-checking against the DOM before treating
 it as a real bug.
+
+**Sider toggle moved inside the sider itself on desktop, same day
+(fourth follow-up)**: was living in `tabBarExtraContent.left` (the tab
+bar, outside the sider) for every viewport, which made sense when the
+sider could fully vanish on any screen size but stopped making sense on
+desktop once it started collapsing to a permanent icon rail instead
+(previous entry above) -- an always-visible sider doesn't need an
+external trigger to reach it. Now conditionally rendered inside
+`.sider-brand` (next to the "GridKeeper"/"GK" text, both toggled by the
+same `!isMobile` check) on desktop, and left in
+`tabBarExtraContent.left` only when `isMobile` -- the mobile sider can
+still collapse to 0 width there, so it still needs something outside
+itself to be reopened. `.sider-brand` restyled as a `justify-content:
+space-between` row (title + toggle) with a `.sider-brand-collapsed`
+variant (tighter padding/gap) for fitting both inside the 80px rail.
+Verified via Playwright: desktop tab bar has zero toggle buttons post-
+change (confirmed via a locator count, not just visual inspection),
+brand row toggle present and correctly positioned in both collapsed/
+expanded states; mobile closed state still has exactly one toggle (in
+the tab bar) and zero inside the sider (not rendered there at all on
+mobile), no regressions to the overlay-open/backdrop-dismiss behavior
+from the earlier mobile-nav pass.

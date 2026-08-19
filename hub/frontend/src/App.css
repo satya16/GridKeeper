@@ -192,10 +192,19 @@
   height: 64px; /* matches antd's default Layout.Header height, for alignment */
   display: flex;
   align-items: center;
-  padding: 0 1.25rem;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0 1.25rem;
   overflow: hidden;
   color: var(--gk-text);
   border-bottom: 1px solid var(--gk-border);
+}
+/* Collapsed rail is only 80px wide -- "GK" + the toggle button need
+   tighter, more symmetric padding than the expanded row's to both fit
+   comfortably. */
+.sider-brand-collapsed {
+  padding: 0 0.5rem;
+  gap: 0.25rem;
 }
 
 /* Layout.Sider is `position: relative` unconditionally in antd (checked

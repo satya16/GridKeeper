@@ -86,13 +86,20 @@ export default function App({ themeMode, onToggleTheme }) {
     if (window.innerWidth <= MOBILE_BREAKPOINT_PX) setSiderCollapsed(true)
   }
 
+  const toggleSider = () => setSiderCollapsed((c) => !c)
+
   // Every page is a Tabs component (even Credentials/Metrics, which only
-  // have one tab each) so the sider toggle, theme toggle, and logout
-  // button always live in the same place via tabBarExtraContent -- one
-  // consistent topmost bar per page, not a separate app-wide header
-  // stacked above whatever the page itself shows.
+  // have one tab each) so the theme toggle and logout button always live
+  // in the same place via tabBarExtraContent -- one consistent topmost
+  // bar per page, not a separate app-wide header stacked above whatever
+  // the page itself shows. The sider toggle itself, though, now lives
+  // *inside* the sider (its own brand row) on desktop, since the sider is
+  // always visible there (icon rail, never fully hidden) -- no need for
+  // an external trigger. On mobile the sider can still fully disappear
+  // (collapsedWidth 0, see below), so it still needs one outside itself
+  // to be reopened; kept in the tab bar there, same as before.
   const tabBarExtraContent = {
-    left: <SiderToggle collapsed={siderCollapsed} onClick={() => setSiderCollapsed((c) => !c)} />,
+    left: isMobile ? <SiderToggle collapsed={siderCollapsed} onClick={toggleSider} /> : null,
     right: (
       <Space size="small">
         <ThemeToggle themeMode={themeMode} onToggle={onToggleTheme} />
@@ -119,11 +126,14 @@ export default function App({ themeMode, onToggleTheme }) {
             this): brand in the sider's own top-left corner, above the nav.
             Collapses to a "GK" monogram on desktop's icon rail rather than
             disappearing, matching the nav items below it (full label -> icon
-            + hover tooltip, not label -> nothing). */}
-        <div className="sider-brand">
+            + hover tooltip, not label -> nothing). The toggle itself lives
+            here too (not the tab bar) on desktop -- see toggleSider's
+            definition above for why. */}
+        <div className={`sider-brand${siderCollapsed && !isMobile ? ' sider-brand-collapsed' : ''}`}>
           <Typography.Title level={4} style={{ margin: 0, color: 'inherit', whiteSpace: 'nowrap' }}>
             {siderCollapsed && !isMobile ? 'GK' : 'GridKeeper'}
           </Typography.Title>
+          {!isMobile && <SiderToggle collapsed={siderCollapsed} onClick={toggleSider} />}
         </div>
         <Menu
           mode="inline"
