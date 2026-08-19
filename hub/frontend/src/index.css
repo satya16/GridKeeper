@@ -7,6 +7,11 @@ body {
   background: #0f1115;
   color: #e6e8eb;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Last-resort net, not the fix itself -- the actual overflow sources
+     (fixed-width grid tracks, unwrapped flex rows) are addressed where
+     they occur. This just stops any of them from creating a horizontally
+     scrollable page if something new sneaks by unnoticed. */
+  overflow-x: hidden;
 }
 
 #root {

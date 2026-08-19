@@ -26,7 +26,7 @@ def _public_hub_url(request: Request) -> str:
 
 
 @router.get("/api/discovery", response_model=list[DiscoveredNodeOut])
-def list_discovered(_admin: str = Depends(auth.require_admin)) -> list[DiscoveredNodeOut]:
+def list_discovered(_admin: str = Depends(auth.require_session)) -> list[DiscoveredNodeOut]:
     return [DiscoveredNodeOut(**w) for w in registry.list_nodes()]
 
 
@@ -36,7 +36,7 @@ async def pair_discovered(
     body: DiscoveryPairRequest,
     request: Request,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> DiscoveryPairResponse:
     node = registry.get(discovery_id)
     if node is None:

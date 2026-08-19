@@ -94,7 +94,7 @@ export function MetricsSection() {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16 }}>
         {chartSpecs.map((spec) => (
           <Card key={spec.key} size="small" type="inner" className="chart-card" title={`${spec.title} (${spec.unit}) — last 30 min`}>
             <LineChart

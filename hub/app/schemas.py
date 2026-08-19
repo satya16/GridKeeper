@@ -3,6 +3,14 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 
+class LoginRequest(BaseModel):
+    password: str
+
+
+class LoginResult(BaseModel):
+    ok: bool
+
+
 class PairingTokenCreate(BaseModel):
     label: str = ""
     group: str = ""

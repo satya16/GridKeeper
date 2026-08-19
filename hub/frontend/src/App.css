@@ -26,11 +26,21 @@
 
 .task-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   font-size: 0.85rem;
   padding: 0.15rem 0;
-  gap: 0.5rem;
+  gap: 0.35rem 0.5rem;
+}
+/* First child is always the label/description text -- let it actually
+   shrink and wrap instead of forcing the row wide. Flex items default to
+   min-width: auto (their content's intrinsic width), which is what was
+   pushing rows into overflow on narrow screens rather than wrapping. */
+.task-row > :first-child {
+  min-width: 0;
+  overflow-wrap: break-word;
+  flex: 1 1 auto;
 }
 
 .progress-bar {
@@ -151,6 +161,28 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Card's own head layout (antd, see node_modules/antd/es/card/style) puts
+   title + extra in one unwrapped flex row: title is flex:1 + ellipsis,
+   extra takes its natural width with margin-inline-start: auto and never
+   shrinks. On a narrow viewport a longish `extra` (e.g. a live "updated
+   3:45:12 PM" status string) eats nearly the whole row, so the title
+   ellipsizes down to almost nothing instead of just wrapping below it --
+   confirmed against antd's actual source, not guessed. Desktop is
+   untouched; this only changes anything once the row genuinely can't fit. */
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 0.75rem;
+    gap: 1rem;
+  }
+  .ant-card-head-wrapper {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .ant-card-extra {
+    margin-inline-start: 0;
+  }
 }
 
 .section-header {

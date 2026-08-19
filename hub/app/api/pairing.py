@@ -14,7 +14,7 @@ router = APIRouter(tags=["pairing"])
 def create_pairing_token(
     body: PairingTokenCreate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> PairingTokenOut:
     """A token's `group`, if set, carries over to whichever node redeems
     it (see enroll() below) -- so an admin onboarding a whole lab can mint

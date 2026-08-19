@@ -21,7 +21,7 @@ async def set_node_schedule(
     node_id: str,
     policy: SchedulePolicy,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> SchedulePolicy:
     node = db.get(Node, node_id)
     if node is None:
@@ -39,7 +39,7 @@ async def set_node_schedule(
 async def apply_schedule_to_all(
     policy: SchedulePolicy,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> list[str]:
     """Sets the same schedule policy on every currently-known node --
     the common case for a school lab of identical machines. Nodes that
@@ -61,7 +61,7 @@ async def apply_schedule_to_group(
     group: str,
     policy: SchedulePolicy,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> list[str]:
     """Same as apply-all, scoped to one group -- the motivating case is a
     deployment with multiple physically distinct rooms that need different

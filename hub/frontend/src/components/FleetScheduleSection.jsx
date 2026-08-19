@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Select, Space, message } from 'antd'
+import { Card, Select, Space, Typography, message } from 'antd'
 import { api } from '../api.js'
 import { SchedulePolicyForm } from './SchedulePolicyForm.jsx'
 
@@ -17,12 +17,12 @@ export function FleetScheduleSection({ groups, onApplied }) {
   }
 
   return (
-    <Card
-      title="Fleet schedule"
-      extra={<span className="muted">applies to a group, or every machine at once</span>}
-    >
+    <Card title="Fleet schedule">
+      <Typography.Paragraph type="secondary" style={{ marginTop: -8, marginBottom: 12 }}>
+        Applies to a group, or every machine at once.
+      </Typography.Paragraph>
       <Space direction="vertical" style={{ width: '100%' }}>
-        <Space>
+        <Space wrap>
           Apply to
           <Select
             style={{ minWidth: 180 }}

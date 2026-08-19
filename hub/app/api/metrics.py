@@ -10,7 +10,7 @@ router = APIRouter(tags=["metrics"])
 
 
 @router.get("/api/metrics")
-def get_metrics(db: Session = Depends(get_db), _admin: str = Depends(auth.require_admin)) -> dict:
+def get_metrics(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> dict:
     """Per-node rolling window of {t, cpu_percent, ram_percent,
     temperature_c} points, keyed by node id, for the dashboard's live
     graphs. Nodes with no metrics recorded yet are simply absent."""

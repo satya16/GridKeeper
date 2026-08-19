@@ -72,7 +72,7 @@ export function FahBlock({ nodeId, fah, onChanged }) {
         <p className="task-row muted">no slots reported</p>
       )}
 
-      <Space style={{ marginTop: 8 }}>
+      <Space style={{ marginTop: 8 }} wrap>
         <Button onClick={() => run('unpause_all', {})}>Resume all</Button>
         <Button danger onClick={() => run('pause_all', {})}>
           Pause all

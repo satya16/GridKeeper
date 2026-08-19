@@ -10,7 +10,7 @@ export function NodeListSection({ nodes, groups, onChanged }) {
     <Card
       title="Machines"
       extra={
-        <Space size="small" className="muted">
+        <Space size="small" className="muted" wrap>
           Group
           <Select
             style={{ minWidth: 140 }}
@@ -23,7 +23,7 @@ export function NodeListSection({ nodes, groups, onChanged }) {
       }
     >
       {filtered.length ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))', gap: 16 }}>
           {filtered.map((w) => (
             <NodeCard key={w.id} node={w} onChanged={onChanged} />
           ))}

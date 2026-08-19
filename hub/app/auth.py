@@ -1,22 +1,35 @@
 import hashlib
 import hmac
 import secrets
+import threading
+import time
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from .db import Node
 
-_basic = HTTPBasic()
-
 # Very small v1 auth story: a single admin password protects the dashboard
-# and REST API (HTTP Basic), nodes authenticate with a bearer token that
-# was minted during enrollment. Nothing here is meant to survive contact
-# with a multi-user future -- see _docs/REQUIREMENTS.md section 6/9.
+# and REST API, nodes authenticate with a bearer token that was minted
+# during enrollment. Nothing here is meant to survive contact with a
+# multi-user future -- see _docs/REQUIREMENTS.md section 6/9.
+#
+# Session-cookie login (not HTTP Basic): switched 2026-08-19 after a real
+# report that Firefox Focus never shows Basic Auth's native credential
+# prompt at all (just renders as "unauthenticated", no way in) --
+# browser-native Basic Auth UI turned out to not be reliable enough across
+# real mobile browsers to depend on. In-memory session store, not
+# persisted -- a hub restart logging everyone out is an acceptable
+# tradeoff for this app's size (unlike node bearer tokens, which *are*
+# persisted, since nodes need to reconnect unattended).
 
 ADMIN_PASSWORD_ENV = "GRIDKEEPER_ADMIN_PASSWORD"
 DEFAULT_ADMIN_PASSWORD = "changeme"
+SESSION_COOKIE_NAME = "gridkeeper_session"
+SESSION_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
+
+_sessions_lock = threading.Lock()
+_sessions: dict[str, float] = {}  # token -> expires_at (unix time)
 
 
 def new_token() -> str:
@@ -41,16 +54,45 @@ def get_admin_password() -> str:
     return os.environ.get(ADMIN_PASSWORD_ENV, DEFAULT_ADMIN_PASSWORD)
 
 
-def require_admin(credentials: HTTPBasicCredentials = Depends(_basic)) -> str:
-    """HTTP Basic auth for the dashboard + REST API. Username can be anything
-    (e.g. 'admin'); only the password is checked against GRIDKEEPER_ADMIN_PASSWORD."""
-    if not hmac.compare_digest(credentials.password, get_admin_password()):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="bad admin password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
+def create_session(response: Response) -> None:
+    token = new_token()
+    with _sessions_lock:
+        _sessions[token] = time.time() + SESSION_TTL_SECONDS
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        token,
+        max_age=SESSION_TTL_SECONDS,
+        httponly=True,
+        samesite="lax",
+        # No `secure=True`: this app is deliberately served over plain LAN
+        # HTTP by default (see README) -- requiring HTTPS here would just
+        # break the cookie silently. Real TLS deployments are a documented
+        # open item (_docs/REQUIREMENTS.md), not solved by this flag alone.
+    )
+
+
+def destroy_session(token: str | None, response: Response) -> None:
+    if token:
+        with _sessions_lock:
+            _sessions.pop(token, None)
+    response.delete_cookie(SESSION_COOKIE_NAME)
+
+
+def _session_valid(token: str) -> bool:
+    with _sessions_lock:
+        expires_at = _sessions.get(token)
+        if expires_at is None:
+            return False
+        if expires_at < time.time():
+            del _sessions[token]
+            return False
+        return True
+
+
+def require_session(session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME)) -> str:
+    if not session_token or not _session_valid(session_token):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="not logged in")
+    return session_token
 
 
 def authenticate_node(db: Session, node_id: str, token: str) -> Node:

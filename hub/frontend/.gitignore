@@ -11,7 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
-verify-screenshot.png
+verify-screenshot*.png
 
 # Editor directories and files
 .vscode/*

@@ -3,7 +3,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import HTMLResponse
 
@@ -14,6 +14,7 @@ from .api import pairing as pairing_api
 from .api import metrics as metrics_api
 from .api import schedule as schedule_api
 from .api import credentials as credentials_api
+from .api import auth as auth_api
 from .db import SessionLocal, init_db, utcnow
 from .discovery import registry as discovery_registry
 from .metrics_store import store as metrics_store
@@ -40,6 +41,7 @@ app.include_router(discovery_api.router)
 app.include_router(schedule_api.router)
 app.include_router(metrics_api.router)
 app.include_router(credentials_api.router)
+app.include_router(auth_api.router)
 
 app.mount("/static", StaticFiles(directory=os.path.join(_APP_DIR, "static")), name="static")
 
@@ -47,13 +49,15 @@ _DASHBOARD_INDEX_HTML = os.path.join(_APP_DIR, "static", "dist", "index.html")
 
 
 @app.get("/", response_class=HTMLResponse)
-def dashboard(_admin: str = Depends(auth.require_admin)) -> HTMLResponse:
+def dashboard() -> HTMLResponse:
     # Served from the React+Ant Design build's output (hub/frontend/,
     # built via `npm run build` into static/dist/) rather than a Jinja2
-    # template -- see _docs/knowledge-graph/dashboard-ui.md. The auth gate is
-    # unchanged: HTTP Basic on this route, same as every /api/* route, so
-    # the browser's native Basic-Auth challenge covers both the page load
-    # and the SPA's own same-origin fetch() calls with no extra wiring.
+    # template -- see _docs/knowledge-graph/dashboard-ui.md. Deliberately
+    # unauthenticated: the login gate now lives in the React app itself
+    # (a real login form, not a browser-native prompt -- see auth.py's
+    # comment on why), so the HTML/JS bundle has to be reachable before
+    # anyone's logged in for that form to even render. Every /api/* route
+    # underneath it still requires a valid session.
     if not os.path.exists(_DASHBOARD_INDEX_HTML):
         raise HTTPException(
             status_code=500,

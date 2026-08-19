@@ -73,7 +73,7 @@ function CredentialRow({ credential, nodes, groups, onChanged, onNodeChanged }) 
           {credential.last_used_at ? `last applied ${new Date(credential.last_used_at).toLocaleString()}` : 'never applied'}
         </span>
       </span>
-      <Space size="small">
+      <Space size="small" wrap>
         <Select
           size="small"
           style={{ minWidth: 200 }}

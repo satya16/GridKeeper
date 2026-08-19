@@ -2,89 +2,86 @@ import os
 
 from app.connections import connections
 
-from .conftest import AUTH
 
 
-def _enroll(client, name: str = "node-1") -> dict:
-    token = client.post("/api/pairing-tokens", json={"label": ""}, auth=AUTH).json()["token"]
-    resp = client.post(
+def _enroll(auth_client, name: str = "node-1") -> dict:
+    token = auth_client.post("/api/pairing-tokens", json={"label": ""}).json()["token"]
+    resp = auth_client.post(
         "/api/enroll", json={"pairing_token": token, "name": name, "os_name": "linux", "backends": ["boinc"]}
     )
     assert resp.status_code == 200
     return resp.json()
 
 
-def _create_credential(client, name: str = "wcg-lab-account", account_key: str = "supersecret123") -> dict:
-    resp = client.post(
+def _create_credential(auth_client, name: str = "wcg-lab-account", account_key: str = "supersecret123") -> dict:
+    resp = auth_client.post(
         "/api/credentials",
         json={"name": name, "project_url": "https://www.worldcommunitygrid.org/", "account_key": account_key},
-        auth=AUTH,
     )
     assert resp.status_code == 200
     return resp.json()
 
 
-def test_create_credential_never_returns_the_key(client):
-    body = _create_credential(client)
+def test_create_credential_never_returns_the_key(auth_client):
+    body = _create_credential(auth_client)
     assert body["name"] == "wcg-lab-account"
     assert body["project_url"] == "https://www.worldcommunitygrid.org/"
     assert "account_key" not in body
     assert "key" not in body
 
 
-def test_create_credential_rejects_duplicate_name(client):
-    _create_credential(client)
-    resp = client.post(
+def test_create_credential_rejects_duplicate_name(auth_client):
+    _create_credential(auth_client)
+    resp = auth_client.post(
         "/api/credentials",
         json={"name": "wcg-lab-account", "project_url": "https://example.org/", "account_key": "other"},
-        auth=AUTH,
     )
     assert resp.status_code == 409
 
 
-def test_list_credentials_never_returns_the_key(client):
-    _create_credential(client)
-    resp = client.get("/api/credentials", auth=AUTH)
+def test_list_credentials_never_returns_the_key(auth_client):
+    _create_credential(auth_client)
+    resp = auth_client.get("/api/credentials")
     assert resp.status_code == 200
     body = resp.json()
     assert len(body) == 1
     assert "account_key" not in body[0]
 
 
-def test_delete_credential(client):
-    created = _create_credential(client)
-    resp = client.delete(f"/api/credentials/{created['id']}", auth=AUTH)
+def test_delete_credential(auth_client):
+    created = _create_credential(auth_client)
+    resp = auth_client.delete(f"/api/credentials/{created['id']}")
     assert resp.status_code == 204
-    assert client.get("/api/credentials", auth=AUTH).json() == []
+    assert auth_client.get("/api/credentials").json() == []
 
 
-def test_delete_unknown_credential_404(client):
-    resp = client.delete("/api/credentials/does-not-exist", auth=AUTH)
+def test_delete_unknown_credential_404(auth_client):
+    resp = auth_client.delete("/api/credentials/does-not-exist")
     assert resp.status_code == 404
 
 
-def test_apply_credential_unknown_credential_404(client):
-    enrolled = _enroll(client)
-    resp = client.post(
-        "/api/credentials/does-not-exist/apply", json={"node_id": enrolled["node_id"]}, auth=AUTH
+def test_apply_credential_unknown_credential_404(auth_client):
+    enrolled = _enroll(auth_client)
+    resp = auth_client.post(
+        "/api/credentials/does-not-exist/apply", json={"node_id": enrolled["node_id"]}
     )
     assert resp.status_code == 404
 
 
-def test_apply_credential_unknown_node_404(client):
-    created = _create_credential(client)
-    resp = client.post(f"/api/credentials/{created['id']}/apply", json={"node_id": "does-not-exist"}, auth=AUTH)
+def test_apply_credential_unknown_node_404(auth_client):
+    created = _create_credential(auth_client)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply", json={"node_id": "does-not-exist"})
     assert resp.status_code == 404
 
 
-def test_apply_credential_dispatches_attach_project_with_real_key(client, monkeypatch):
+def test_apply_credential_dispatches_attach_project_with_real_key(auth_client, monkeypatch):
     """The stored key round-trips through encryption and actually reaches
     the node in plaintext, the same as if it had been typed into the
     dashboard's attach form directly -- only what's persisted/echoed back
     through the commands audit log is redacted."""
-    enrolled = _enroll(client)
+    enrolled = _enroll(auth_client)
     node_id = enrolled["node_id"]
-    created = _create_credential(client, account_key="supersecret123")
+    created = _create_credential(auth_client, account_key="supersecret123")
 
     monkeypatch.setattr(connections, "is_online", lambda wid: True)
 
@@ -97,7 +94,7 @@ def test_apply_credential_dispatches_attach_project_with_real_key(client, monkey
 
     monkeypatch.setattr(connections, "send_frame", fake_send_frame)
 
-    resp = client.post(f"/api/credentials/{created['id']}/apply", json={"node_id": node_id}, auth=AUTH)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply", json={"node_id": node_id})
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
@@ -111,10 +108,10 @@ def test_apply_credential_dispatches_attach_project_with_real_key(client, monkey
     assert body["payload"]["account_key"] != "supersecret123"
 
 
-def test_apply_credential_updates_last_used_at(client, monkeypatch):
-    enrolled = _enroll(client)
+def test_apply_credential_updates_last_used_at(auth_client, monkeypatch):
+    enrolled = _enroll(auth_client)
     node_id = enrolled["node_id"]
-    created = _create_credential(client)
+    created = _create_credential(auth_client)
     assert created["last_used_at"] is None
 
     monkeypatch.setattr(connections, "is_online", lambda wid: True)
@@ -125,29 +122,29 @@ def test_apply_credential_updates_last_used_at(client, monkeypatch):
 
     monkeypatch.setattr(connections, "send_frame", fake_send_frame)
 
-    client.post(f"/api/credentials/{created['id']}/apply", json={"node_id": node_id}, auth=AUTH)
+    auth_client.post(f"/api/credentials/{created['id']}/apply", json={"node_id": node_id})
 
-    refreshed = client.get("/api/credentials", auth=AUTH).json()[0]
+    refreshed = auth_client.get("/api/credentials").json()[0]
     assert refreshed["last_used_at"] is not None
 
 
-def test_apply_credential_to_offline_node_fails(client):
-    enrolled = _enroll(client)
-    created = _create_credential(client)
-    resp = client.post(
-        f"/api/credentials/{created['id']}/apply", json={"node_id": enrolled["node_id"]}, auth=AUTH
+def test_apply_credential_to_offline_node_fails(auth_client):
+    enrolled = _enroll(auth_client)
+    created = _create_credential(auth_client)
+    resp = auth_client.post(
+        f"/api/credentials/{created['id']}/apply", json={"node_id": enrolled["node_id"]}
     )
     assert resp.status_code == 409
 
 
-def test_apply_group_dispatches_to_online_members_and_skips_offline(client, monkeypatch):
-    online_node = _enroll(client, "lab-1")
-    offline_node = _enroll(client, "lab-2")
-    other_group_node = _enroll(client, "library-1")
-    client.put(f"/api/nodes/{online_node['node_id']}/group", json={"group": "Lab 1"}, auth=AUTH)
-    client.put(f"/api/nodes/{offline_node['node_id']}/group", json={"group": "Lab 1"}, auth=AUTH)
-    client.put(f"/api/nodes/{other_group_node['node_id']}/group", json={"group": "Library"}, auth=AUTH)
-    created = _create_credential(client, account_key="supersecret123")
+def test_apply_group_dispatches_to_online_members_and_skips_offline(auth_client, monkeypatch):
+    online_node = _enroll(auth_client, "lab-1")
+    offline_node = _enroll(auth_client, "lab-2")
+    other_group_node = _enroll(auth_client, "library-1")
+    auth_client.put(f"/api/nodes/{online_node['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{offline_node['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{other_group_node['node_id']}/group", json={"group": "Library"})
+    created = _create_credential(auth_client, account_key="supersecret123")
 
     monkeypatch.setattr(connections, "is_online", lambda wid: wid == online_node["node_id"])
 
@@ -160,7 +157,7 @@ def test_apply_group_dispatches_to_online_members_and_skips_offline(client, monk
 
     monkeypatch.setattr(connections, "send_frame", fake_send_frame)
 
-    resp = client.post(f"/api/credentials/{created['id']}/apply-group/Lab 1", auth=AUTH)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply-group/Lab 1")
     assert resp.status_code == 200
     results = resp.json()
     assert len(results) == 2  # only Lab 1's two members, not the Library node
@@ -176,22 +173,22 @@ def test_apply_group_dispatches_to_online_members_and_skips_offline(client, monk
     assert sent_frames[0]["payload"]["account_key"] == "supersecret123"
 
 
-def test_apply_group_unknown_group_returns_empty_list(client):
-    created = _create_credential(client)
-    resp = client.post(f"/api/credentials/{created['id']}/apply-group/does-not-exist", auth=AUTH)
+def test_apply_group_unknown_group_returns_empty_list(auth_client):
+    created = _create_credential(auth_client)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply-group/does-not-exist")
     assert resp.status_code == 200
     assert resp.json() == []
 
 
-def test_apply_group_unknown_credential_404(client):
-    resp = client.post("/api/credentials/does-not-exist/apply-group/Lab 1", auth=AUTH)
+def test_apply_group_unknown_credential_404(auth_client):
+    resp = auth_client.post("/api/credentials/does-not-exist/apply-group/Lab 1")
     assert resp.status_code == 404
 
 
-def test_apply_all_dispatches_to_every_online_node(client, monkeypatch):
-    w1 = _enroll(client, "w1")
-    w2 = _enroll(client, "w2")
-    created = _create_credential(client)
+def test_apply_all_dispatches_to_every_online_node(auth_client, monkeypatch):
+    w1 = _enroll(auth_client, "w1")
+    w2 = _enroll(auth_client, "w2")
+    created = _create_credential(auth_client)
 
     monkeypatch.setattr(connections, "is_online", lambda wid: True)
 
@@ -201,48 +198,47 @@ def test_apply_all_dispatches_to_every_online_node(client, monkeypatch):
 
     monkeypatch.setattr(connections, "send_frame", fake_send_frame)
 
-    resp = client.post(f"/api/credentials/{created['id']}/apply-all", auth=AUTH)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply-all")
     assert resp.status_code == 200
     results = resp.json()
     assert {r["node_id"] for r in results} == {w1["node_id"], w2["node_id"]}
     assert all(r["status"] == "ok" for r in results)
 
 
-def test_apply_all_unknown_credential_404(client):
-    resp = client.post("/api/credentials/does-not-exist/apply-all", auth=AUTH)
+def test_apply_all_unknown_credential_404(auth_client):
+    resp = auth_client.post("/api/credentials/does-not-exist/apply-all")
     assert resp.status_code == 404
 
 
-def test_apply_all_with_no_nodes_returns_empty_list(client):
-    created = _create_credential(client)
-    resp = client.post(f"/api/credentials/{created['id']}/apply-all", auth=AUTH)
+def test_apply_all_with_no_nodes_returns_empty_list(auth_client):
+    created = _create_credential(auth_client)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply-all")
     assert resp.status_code == 200
     assert resp.json() == []
 
 
-def test_apply_group_all_offline_does_not_touch_last_used_at(client, monkeypatch):
+def test_apply_group_all_offline_does_not_touch_last_used_at(auth_client, monkeypatch):
     """No online nodes means no key was ever decrypted or dispatched --
     last_used_at should stay None, not get bumped for a no-op batch."""
-    enrolled = _enroll(client)
-    client.put(f"/api/nodes/{enrolled['node_id']}/group", json={"group": "Lab 1"}, auth=AUTH)
-    created = _create_credential(client)
+    enrolled = _enroll(auth_client)
+    auth_client.put(f"/api/nodes/{enrolled['node_id']}/group", json={"group": "Lab 1"})
+    created = _create_credential(auth_client)
 
     monkeypatch.setattr(connections, "is_online", lambda wid: False)
 
-    resp = client.post(f"/api/credentials/{created['id']}/apply-group/Lab 1", auth=AUTH)
+    resp = auth_client.post(f"/api/credentials/{created['id']}/apply-group/Lab 1")
     assert resp.status_code == 200
     assert resp.json()[0]["status"] == "skipped"
 
-    refreshed = client.get("/api/credentials", auth=AUTH).json()[0]
+    refreshed = auth_client.get("/api/credentials").json()[0]
     assert refreshed["last_used_at"] is None
 
 
-def test_create_credential_without_secret_key_configured_returns_500(client, monkeypatch):
+def test_create_credential_without_secret_key_configured_returns_500(auth_client, monkeypatch):
     monkeypatch.delitem(os.environ, "GRIDKEEPER_SECRET_KEY", raising=False)
-    resp = client.post(
+    resp = auth_client.post(
         "/api/credentials",
         json={"name": "x", "project_url": "https://example.org/", "account_key": "abc"},
-        auth=AUTH,
     )
     assert resp.status_code == 500
     assert "GRIDKEEPER_SECRET_KEY" in resp.json()["detail"]

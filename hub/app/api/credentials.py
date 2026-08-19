@@ -27,7 +27,7 @@ def _credential_out(cred: CredentialKey) -> CredentialOut:
 def create_credential(
     body: CredentialCreate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> CredentialOut:
     if db.query(CredentialKey).filter(CredentialKey.name == body.name).first() is not None:
         raise HTTPException(status_code=409, detail=f"a credential named '{body.name}' already exists")
@@ -48,7 +48,7 @@ def create_credential(
 
 
 @router.get("/api/credentials", response_model=list[CredentialOut])
-def list_credentials(db: Session = Depends(get_db), _admin: str = Depends(auth.require_admin)) -> list[CredentialOut]:
+def list_credentials(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> list[CredentialOut]:
     return [_credential_out(c) for c in db.query(CredentialKey).order_by(CredentialKey.name).all()]
 
 
@@ -56,7 +56,7 @@ def list_credentials(db: Session = Depends(get_db), _admin: str = Depends(auth.r
 def delete_credential(
     credential_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> None:
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
@@ -70,7 +70,7 @@ async def apply_credential(
     credential_id: str,
     body: CredentialApplyRequest,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> CommandOut:
     """Single-node apply -- attaches the saved key's project to one
     node. Fleet-wide/group apply is a deliberate follow-up, not this
@@ -144,7 +144,7 @@ async def apply_credential_to_group(
     credential_id: str,
     group: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> list[CredentialApplyResult]:
     """An unknown or empty group simply matches no nodes rather than
     erroring, same as schedule.py's apply-group."""
@@ -159,7 +159,7 @@ async def apply_credential_to_group(
 async def apply_credential_to_all(
     credential_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> list[CredentialApplyResult]:
     cred = db.get(CredentialKey, credential_id)
     if cred is None:

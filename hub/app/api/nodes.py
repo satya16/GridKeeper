@@ -62,13 +62,13 @@ def _command_out(cmd: Command) -> CommandOut:
 
 
 @router.get("/api/nodes", response_model=list[NodeOut])
-def list_nodes(db: Session = Depends(get_db), _admin: str = Depends(auth.require_admin)) -> list[NodeOut]:
+def list_nodes(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> list[NodeOut]:
     nodes = db.query(Node).order_by(Node.name).all()
     return [_node_out(a) for a in nodes]
 
 
 @router.get("/api/nodes/{node_id}", response_model=NodeOut)
-def get_node(node_id: str, db: Session = Depends(get_db), _admin: str = Depends(auth.require_admin)) -> NodeOut:
+def get_node(node_id: str, db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> NodeOut:
     node = db.get(Node, node_id)
     if node is None:
         raise HTTPException(status_code=404, detail="no such node")
@@ -76,7 +76,7 @@ def get_node(node_id: str, db: Session = Depends(get_db), _admin: str = Depends(
 
 
 @router.get("/api/groups", response_model=list[str])
-def list_groups(db: Session = Depends(get_db), _admin: str = Depends(auth.require_admin)) -> list[str]:
+def list_groups(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> list[str]:
     """Distinct, non-empty group names currently in use -- lets the
     dashboard offer a picker instead of everyone free-typing "Lab 1" vs
     "lab1" vs "Lab One" for the same room."""
@@ -89,7 +89,7 @@ def set_node_group(
     node_id: str,
     body: NodeGroupUpdate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> NodeGroupUpdate:
     node = db.get(Node, node_id)
     if node is None:
@@ -156,7 +156,7 @@ async def issue_command(
     node_id: str,
     body: CommandRequest,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> CommandOut:
     node = db.get(Node, node_id)
     if node is None:
@@ -169,7 +169,7 @@ def get_command(
     node_id: str,
     command_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
+    _admin: str = Depends(auth.require_session),
 ) -> CommandOut:
     cmd = db.get(Command, command_id)
     if cmd is None or cmd.node_id != node_id:

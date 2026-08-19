@@ -19,7 +19,6 @@ from app.db import Base, engine, init_db
 from app.main import app
 
 ADMIN_PASSWORD = "test-admin-password"
-AUTH = ("admin", ADMIN_PASSWORD)
 
 
 async def _noop() -> None:
@@ -40,3 +39,16 @@ def client():
     with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())
+
+
+@pytest.fixture()
+def auth_client(client):
+    """The same TestClient, pre-logged-in -- httpx's client keeps cookies
+    across requests made on the same instance, so every call after this
+    carries the session automatically, same as a real logged-in browser
+    tab. Endpoints that don't require a session (e.g. /api/enroll) work
+    identically on this fixture too -- an extra cookie present doesn't
+    change their behavior."""
+    resp = client.post("/api/login", json={"password": ADMIN_PASSWORD})
+    assert resp.status_code == 200
+    return client

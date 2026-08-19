@@ -1,7 +1,18 @@
 // Thin fetch wrapper -- same-origin REST calls to the FastAPI backend.
-// Auth is HTTP Basic, handled entirely by the browser (it challenges once
-// on page load and then attaches credentials to every same-origin request
-// automatically) -- nothing to do here beyond `credentials: "same-origin"`.
+// Auth is a session cookie (see hub/app/auth.py for why this replaced
+// HTTP Basic -- its native browser prompt turned out not to render at
+// all in some real mobile browsers), sent automatically by the browser
+// on every same-origin request once `/api/login` sets it -- nothing to
+// do here beyond `credentials: "same-origin"`.
+//
+// `onUnauthorized`, set by App.jsx, fires whenever any call gets a 401 --
+// not just the initial session check -- so a session that expires (or
+// gets invalidated by a hub restart) mid-use kicks the UI back to the
+// login screen instead of every poll silently failing forever.
+let onUnauthorized = () => {}
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn
+}
 
 async function request(path, options = {}) {
   const res = await fetch(path, {
@@ -11,6 +22,7 @@ async function request(path, options = {}) {
   })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
+    if (res.status === 401) onUnauthorized()
     const err = new Error(body.detail || `${options.method || 'GET'} ${path} -> ${res.status}`)
     err.status = res.status
     err.body = body
@@ -20,6 +32,9 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  login: (password) => request('/api/login', { method: 'POST', body: JSON.stringify({ password }) }),
+  logout: () => request('/api/logout', { method: 'POST' }),
+  checkSession: () => request('/api/session'),
   listNodes: () => request('/api/nodes'),
   listGroups: () => request('/api/groups'),
   setNodeGroup: (nodeId, group) =>

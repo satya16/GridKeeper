@@ -94,7 +94,7 @@ export function BoincBlock({ nodeId, boinc, onChanged }) {
                 {p.name || p.url}
                 {p.suspended ? ' (suspended)' : ''}
               </span>
-              <Space size="small">
+              <Space size="small" wrap>
                 <Button
                   size="small"
                   loading={isPending}
@@ -126,7 +126,7 @@ export function BoincBlock({ nodeId, boinc, onChanged }) {
         </div>
       ))}
 
-      <Space style={{ marginTop: 8 }}>
+      <Space style={{ marginTop: 8 }} wrap>
         <Button loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('resume_all')}>
           Resume all
         </Button>

@@ -14,10 +14,15 @@ vanilla-JS version on 2026-08-18 (deliberate scope decision: only this
 UI moved to React+AntD, not [node-local-ui](node-local-ui.md), which
 stays dependency-free by design — see memory). `npm run build` outputs
 into `hub/app/static/dist/`, gitignored, served by `main.py`'s `/`
-route (still behind the same `auth.require_admin` HTTP-Basic gate as
-every `/api/*` route — the browser's native Basic-Auth challenge covers
-the SPA's `fetch()` calls too, no new auth wiring needed). See
-`hub/frontend/README.md` for build/dev/verify instructions.
+route. See `hub/frontend/README.md` for build/dev/verify instructions.
+
+`LoginForm.jsx` + session-cookie auth added 2026-08-19, replacing HTTP
+Basic (see [hub](hub.md) for why) — `App.jsx` checks `GET /api/session`
+on load and renders `LoginForm` instead of the dashboard until it
+succeeds; `api.js`'s `onUnauthorized` hook (fired by its shared
+`request()` helper on any 401, not just that initial check) flips the
+app back to the login screen if a session expires mid-use, e.g. after a
+hub restart.
 
 Same REST-polling architecture as before, just componentized:
 `usePolling()` (a small custom hook) drives independent timers per
@@ -76,3 +81,37 @@ bug via direct pointer-event and computed-style inspection). Not yet
 covered: automated component tests (no `test/` dir in `frontend/` yet —
 `npm run verify`'s browser smoke test is the only automated check right
 now, deliberately end-to-end rather than unit-level).
+
+**Mobile layout fixed + verified 2026-08-19**, prompted by a real user
+report (overflowing sections, Card titles nearly invisible on a phone).
+`verify.mjs` extended with a second, 375px-wide (iPhone SE) browser
+context alongside the existing desktop one — checks for horizontal
+overflow (`scrollWidth > clientWidth`) and measures every
+`.ant-card-head-title`'s rendered width, failing if any non-trivial
+title renders under 20px. Two real, distinct bugs found this way, not
+guessed from reading CSS alone:
+1. `NodeListSection`/`MetricsSection`'s CSS grids used
+   `minmax(340px, 1fr)`/`minmax(320px, 1fr)` — a fixed lower bound that
+   doesn't shrink below itself, so on a viewport narrower than that the
+   grid track (and the whole page) overflowed horizontally. Fixed with
+   `minmax(min(340px, 100%), 1fr)`, the standard CSS trick for this.
+2. `FleetScheduleSection`'s Card `title` + `extra` genuinely squeezed
+   the title down to "Fl…" (measured 33px) on mobile — antd's own head
+   layout (`node_modules/antd/es/card/style/index.js`, read directly
+   rather than assumed) puts both in one unwrapped flex row where title
+   is `flex:1` + ellipsis and extra takes its full natural width via
+   `margin-inline-start: auto`; a `flex-wrap` media-query fix on
+   `.ant-card-head-wrapper` (added for all cards) helped the other
+   cards' *short, dynamic* `extra` (a live "updated HH:MM:SS" string)
+   but not this card's unusually long *static* `extra` text, since a
+   flex item with `overflow:hidden` gets an automatic min-size of 0 and
+   so never gets pushed to a new line on its own. Real fix: that text
+   wasn't live status to begin with, so it moved out of `extra` entirely
+   into a `Typography.Paragraph` in the card body -- confirmed via
+   before/after screenshots, title back to full width (301px).
+
+`verify.mjs`'s auth also had to change with the HTTP-Basic-to-session
+switch above: `newContext({ httpCredentials })` no longer applies
+anything, since there's no Basic challenge to answer -- it now drives
+the real login form (fill password, click "Log in") before running any
+checks, on both the desktop and mobile browser contexts.

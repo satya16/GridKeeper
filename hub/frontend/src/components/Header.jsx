@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Alert, Button, Space, Typography } from 'antd'
 import { api } from '../api.js'
 
-export function Header() {
+export function Header({ onLogout }) {
   const [banner, setBanner] = useState(null)
 
   const handleNewToken = async () => {
@@ -18,13 +18,16 @@ export function Header() {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <Typography.Title level={3} style={{ margin: 0 }}>
           GridKeeper
         </Typography.Title>
-        <Button type="primary" onClick={handleNewToken}>
-          New pairing token
-        </Button>
+        <Space wrap>
+          <Button type="primary" onClick={handleNewToken}>
+            New pairing token
+          </Button>
+          <Button onClick={onLogout}>Log out</Button>
+        </Space>
       </div>
 
       {banner && (
