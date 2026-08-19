@@ -10,7 +10,7 @@ relates_to: [hub, node, boinc-backend, fah-backend, wire-protocol, data-model, d
 
 Hours/idle restrictions on when a node is allowed to run — the
 "donate cycles when idle, not during classwork" requirement (see
-`docs/REQUIREMENTS.md` §1, school-lab primary use case). A
+`_docs/REQUIREMENTS.md` §1, school-lab primary use case). A
 `SchedulePolicy` is set fleet-wide (`POST /api/schedule/apply-all`),
 per-group (`POST /api/schedule/apply-group/{group}` — e.g. a library
 open later than classrooms, see [pairing](pairing.md) for how machines
@@ -29,7 +29,7 @@ independent background task, *not* nested in the WebSocket connection's
 task group, specifically so a network drop doesn't also suspend schedule
 enforcement.
 
-Full design rationale: `docs/REQUIREMENTS.md` §7. Unverified caveats
+Full design rationale: `_docs/REQUIREMENTS.md` §7. Unverified caveats
 (BOINC prefs file format, `loginctl`-based idle detection): `CLAUDE.md`.
 
 **Partially verified** (2026-08-11, local smoke test): the policy-setting

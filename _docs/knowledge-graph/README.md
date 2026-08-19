@@ -3,7 +3,7 @@
 A navigation layer over this codebase, not a third copy of its docs. Each
 file here is one entity (a component, data model, or protocol) with a
 short summary and links to the *other* entities it relates to, plus the
-real source of truth: actual file paths, `docs/REQUIREMENTS.md` sections,
+real source of truth: actual file paths, `_docs/REQUIREMENTS.md` sections,
 and `CLAUDE.md` caveats. The point is that "what does the scheduling
 system touch, and what's still unverified about it?" should be answerable
 in one file instead of a full-codebase search — useful now, more useful
@@ -27,10 +27,10 @@ relates_to: [hub, node, boinc-backend, fah-backend, wire-protocol]
 
 followed by a few short paragraphs: what it is, why it's shaped the way
 it is (the non-obvious part), and where to look for more (a
-`docs/REQUIREMENTS.md` section, a `CLAUDE.md` caveat). Keep entries short
+`_docs/REQUIREMENTS.md` section, a `CLAUDE.md` caveat). Keep entries short
 — a paragraph or two plus the links. If an entry is growing past that,
 the entity is probably big enough to split, or the detail belongs in
-`docs/REQUIREMENTS.md` instead with just a pointer left here.
+`_docs/REQUIREMENTS.md` instead with just a pointer left here.
 
 **`relates_to` is symmetric.** If A relates to B, B lists A back. When you
 add an edge, add it on both ends.
@@ -39,13 +39,13 @@ add an edge, add it on both ends.
 
 - `implemented-untested` — written, `py_compile`-clean, never actually
   run.
-- `implemented-verified` — either automated-tested (`docs/TESTING.md`'s
+- `implemented-verified` — either automated-tested (`_docs/TESTING.md`'s
   `pytest` suites) or manually confirmed working end to end (dated note
   in the entity, e.g. "Verified 2026-08-11"). Prefer citing which —
   automated coverage stays true; a manual verification note is a
   snapshot that can go stale as the code changes around it.
 - `planned` — discussed, not built (e.g. tracked in "Open questions" in
-  `docs/REQUIREMENTS.md`).
+  `_docs/REQUIREMENTS.md`).
 - `broken` — run against the real thing it targets and confirmed *not*
   to work as written (protocol mismatch, upstream bug, etc.), as opposed
   to `implemented-untested`'s "never actually run." Dated note in the

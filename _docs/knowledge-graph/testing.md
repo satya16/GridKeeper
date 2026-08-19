@@ -5,13 +5,13 @@ status: implemented-verified
 files:
   - hub/tests/
   - node/tests/
-  - docs/TESTING.md
+  - _docs/TESTING.md
 relates_to: [hub, node]
 ---
 
 Two automated `pytest` suites (54 tests total, all passing as of
 2026-08-11) plus a manual checklist for what they can't cover — full
-detail and run instructions in `docs/TESTING.md`, this entry is just the
+detail and run instructions in `_docs/TESTING.md`, this entry is just the
 map pointer.
 
 `hub/tests/` (23 tests) uses FastAPI's `TestClient` against a real
@@ -36,7 +36,7 @@ content): FastAPI's `@app.on_event` is deprecated in the installed
 version; `hub/app/main.py` now uses a `lifespan` context hub
 instead.
 
-**Not covered, by design** — see `docs/TESTING.md`'s manual checklist:
+**Not covered, by design** — see `_docs/TESTING.md`'s manual checklist:
 real `boinccmd`/FAHClient interaction, real mDNS across two machines, and
 anything rendered in a browser. Mocking those wouldn't test anything
 meaningful; the risk lives entirely in "does the real thing match the

@@ -1,8 +1,8 @@
 # GridKeeper — working notes
 
-See [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) for the full design,
+See [`_docs/REQUIREMENTS.md`](_docs/REQUIREMENTS.md) for the full design,
 [`README.md`](README.md) for the quickstart, and
-[`docs/TESTING.md`](docs/TESTING.md) for how to test it.
+[`_docs/TESTING.md`](_docs/TESTING.md) for how to test it.
 
 ## Testing
 
@@ -21,27 +21,27 @@ endpoint or a new piece of non-trivial logic, add a test for it** — this
 project has no CI yet, so "I ran it once by hand" is the only signal
 until someone runs `pytest` again, and that signal decays fast. Full
 breakdown of what's covered vs. what still needs real hardware/a browser:
-`docs/TESTING.md`.
+`_docs/TESTING.md`.
 
 ## Knowledge graph
 
-[`knowledge-graph/`](knowledge-graph/) is a navigation layer over the
+[`_docs/knowledge-graph/`](_docs/knowledge-graph/) is a navigation layer over the
 codebase: one short markdown file per component/data-model/protocol
 (hub, node, pairing, scheduling, metrics, the two backends,
 dashboard-ui, data-model, wire-protocol), each with a `relates_to` list
-of the other entities it touches. Start there — `knowledge-graph/README.md`
+of the other entities it touches. Start there — `_docs/knowledge-graph/README.md`
 first — when orienting in this project cold, especially once it's grown
-past what fits in one read-through of `docs/REQUIREMENTS.md`. It's a
+past what fits in one read-through of `_docs/REQUIREMENTS.md`. It's a
 map, not the territory: entries point into real file paths and
-`docs/REQUIREMENTS.md`/`CLAUDE.md` for detail rather than restating it.
+`_docs/REQUIREMENTS.md`/`CLAUDE.md` for detail rather than restating it.
 
 **Keep it current.** Add an entity when a genuinely new subsystem shows
 up; update an existing one when its behavior changes meaningfully
 (especially its `status` — see the status vocabulary in
-`knowledge-graph/README.md` — the first time something actually gets
+`_docs/knowledge-graph/README.md` — the first time something actually gets
 runtime-verified, flip it there). A stale knowledge graph actively
 misleads, since it reads as authoritative; don't let entries drift from
-what `docs/REQUIREMENTS.md` and the code actually say.
+what `_docs/REQUIREMENTS.md` and the code actually say.
 
 ## Verified 2026-08-11: core system + LAN pairing work end to end
 
@@ -54,7 +54,7 @@ LAN/mDNS discovery path — worked on the first real attempt**), the full
 WebSocket wire protocol (status/command/command_result/schedule frames),
 node restart-and-reconnect with no re-enrollment, and schedule-policy
 persistence across a reconnect. Per-entity detail and exact verification
-notes: [`knowledge-graph/`](knowledge-graph/) (each entity's `status` and
+notes: [`_docs/knowledge-graph/`](_docs/knowledge-graph/) (each entity's `status` and
 "Verified"/"Partially verified" paragraph) — that's now the authoritative
 record of what's confirmed vs. still open, more precise than this file.
 
@@ -66,21 +66,21 @@ disagree with the dashboard. Fixed in both `node/grid_node/pairing.py`
 and `hub/app/api/discovery.py`.
 
 **Still genuinely unverified** (the test environment couldn't exercise
-these — see the relevant `knowledge-graph/` entity for specifics):
+these — see the relevant `_docs/knowledge-graph/` entity for specifics):
 - Actual BOINC/FAH interaction. BOINC specifically was *attempted* on real
   hardware on 2026-08-13 and hit a real blocker, not just "not installed"
   — Ubuntu's `boinc-client` package has a reproducible, inconsistent GUI
   RPC daemon bug (confirmed across a clean purge+reinstall, AppArmor ruled
   out), and the snap alternative doesn't ship `boinccmd`. Full writeup:
-  [boinc-backend](knowledge-graph/boinc-backend.md). FAH was never
+  [boinc-backend](_docs/knowledge-graph/boinc-backend.md). FAH was never
   attempted. `boinccmd`-not-found and command-failure paths were
   confirmed to fail *gracefully*, which is not the same as confirming the
-  real command/parse logic. [fah-backend](knowledge-graph/fah-backend.md),
-  the enforcement half of [scheduling](knowledge-graph/scheduling.md).
+  real command/parse logic. [fah-backend](_docs/knowledge-graph/fah-backend.md),
+  the enforcement half of [scheduling](_docs/knowledge-graph/scheduling.md).
 - The dashboard's client-side JS in an actual browser — the metrics
   charts especially, per the `dataviz` skill's own "render it and look at
   it" step, which no amount of API testing substitutes for.
-  [metrics](knowledge-graph/metrics.md), [dashboard-ui](knowledge-graph/dashboard-ui.md).
+  [metrics](_docs/knowledge-graph/metrics.md), [dashboard-ui](_docs/knowledge-graph/dashboard-ui.md).
 - LAN pairing across two genuinely separate machines (this test had
   node and hub on the same host, so mDNS never had to cross a real
   network segment).

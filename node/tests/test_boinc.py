@@ -38,7 +38,7 @@ GUI URL:
 # all; run mode lives under "CPU status" as "current mode:". Originally
 # written from documentation/memory as "task mode: auto" under a
 # "======== Client status ========" header, which never matched any real
-# output -- see knowledge-graph/boinc-backend.md.
+# output -- see _docs/knowledge-graph/boinc-backend.md.
 SAMPLE_CC_STATUS = """
 network connection status: don't need connection
 CPU status

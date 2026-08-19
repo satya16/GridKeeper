@@ -50,7 +50,7 @@ _DASHBOARD_INDEX_HTML = os.path.join(_APP_DIR, "static", "dist", "index.html")
 def dashboard(_admin: str = Depends(auth.require_admin)) -> HTMLResponse:
     # Served from the React+Ant Design build's output (hub/frontend/,
     # built via `npm run build` into static/dist/) rather than a Jinja2
-    # template -- see knowledge-graph/dashboard-ui.md. The auth gate is
+    # template -- see _docs/knowledge-graph/dashboard-ui.md. The auth gate is
     # unchanged: HTTP Basic on this route, same as every /api/* route, so
     # the browser's native Basic-Auth challenge covers both the page load
     # and the SPA's own same-origin fetch() calls with no extra wiring.

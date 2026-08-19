@@ -4,7 +4,7 @@ The node half of GridKeeper. Runs on each machine that has BOINC and/or
 Folding@home (FAHClient) installed, reports their status to GridKeeper,
 and executes start/stop commands issued from the hub's dashboard.
 
-See [`../docs/REQUIREMENTS.md`](../docs/REQUIREMENTS.md) for the full design.
+See [`../_docs/REQUIREMENTS.md`](../_docs/REQUIREMENTS.md) for the full design.
 
 ## Install (Ubuntu)
 
@@ -127,7 +127,7 @@ pausing/resuming stays a hub-dashboard action.
   HTTP listener on an OS-assigned port, bound to all interfaces, plus an
   mDNS advertisement -- fine on a trusted home/lab LAN, not something to
   expose past a firewall. See "LAN discovery & 6-digit code pairing" in
-  `docs/REQUIREMENTS.md` for the exact security posture.
+  `_docs/REQUIREMENTS.md` for the exact security posture.
 - The mDNS registration in `pairing.py` has been confirmed working (a
   node advertising and a hub discovering/pairing it on the same
   host) -- not yet tested across two genuinely separate machines. If the

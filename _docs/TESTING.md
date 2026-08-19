@@ -51,7 +51,7 @@ can answer.
 ## Manual checklist
 
 Everything below has a **last verified** date. If it's stale, don't
-trust it — re-run it. See `CLAUDE.md` and `knowledge-graph/` for the
+trust it — re-run it. See `CLAUDE.md` and `_docs/knowledge-graph/` for the
 detailed, dated per-component verification notes this summarizes.
 
 ### Core system + LAN pairing — last verified 2026-08-11 ✅
@@ -85,7 +85,7 @@ path (`_execute_command`), not called directly, and confirmed via
 protocol this backend originally targeted (v7 PyON) doesn't exist in the
 shipped client at all — rewrote `fah.py` for the JSON/WebSocket API,
 including a live-only discovery that even the upstream GitHub source is
-ahead of the shipped binary (details: `knowledge-graph/fah-backend.md`).
+ahead of the shipped binary (details: `_docs/knowledge-graph/fah-backend.md`).
 Still open: `pause_slot`/`unpause_slot` couldn't be tested as
 per-group actions since the shipped client has no group/slot concept at
 all (they now act globally, correctly matching that reality, but there's
@@ -120,7 +120,7 @@ fixed a real parsing bug this unblocked testing: `get_status()`'s
 client's `--get_cc_status` output at all (real field is `"current mode:"`
 under a `"CPU status"` section) — was silently always `"unknown"`,
 untested because the daemon-hang bug made this code path unreachable
-until now. Full story: `knowledge-graph/boinc-backend.md`. Still open:
+until now. Full story: `_docs/knowledge-graph/boinc-backend.md`. Still open:
 `attach_project`/`detach_project` against a real project (this machine
 has no BOINC project account), and by extension the `Projects`/`Tasks`
 block-parsing in `get_status()` against real non-empty data — those
@@ -135,10 +135,10 @@ also still unverified.
       above; needs a real BOINC project account, which this machine
       doesn't have.
 - [ ] **Node local status page in a real browser** (added 2026-08-18,
-      see `knowledge-graph/node-local-ui.md`): confirmed over real HTTP
+      see `_docs/knowledge-graph/node-local-ui.md`): confirmed over real HTTP
       with real backend/metrics data from a real machine, but never
       actually painted by a browser. (The *hub* dashboard's
-      equivalent gap is resolved — see `knowledge-graph/dashboard-ui.md`;
+      equivalent gap is resolved — see `_docs/knowledge-graph/dashboard-ui.md`;
       this one's different code, stdlib Python `http.server`, not React,
       and hasn't had the same Playwright pass yet.)
 - [ ] **LAN pairing across two separate machines** (this project's test

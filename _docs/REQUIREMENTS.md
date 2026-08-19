@@ -393,7 +393,7 @@ before packaging the hub.
   "Library")~~ — **built**: `Node.group`/`PairingToken.group`,
   `PUT /api/nodes/{id}/group`, `GET /api/groups`, and
   `POST /api/schedule/apply-group/{group}` for per-room hours. See
-  `knowledge-graph/data-model.md`, `pairing.md`, `scheduling.md`,
+  `_docs/knowledge-graph/data-model.md`, `pairing.md`, `scheduling.md`,
   `dashboard-ui.md`. Grouping is currently schedule-only — extending
   group-scoped *commands* (e.g. "suspend all of Lab 1") beyond schedule
   is still open if that turns out to matter in practice.

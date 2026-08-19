@@ -81,7 +81,7 @@ def get_status() -> dict:
     guessed as unit["wu"]["project"] from reading the upstream source, which
     was wrong: "wu" actually holds run/clone/gen/collection-server fields,
     no project number at all. Left as a cautionary example in the module
-    history (see knowledge-graph/fah-backend.md) of why this client's wire
+    history (see _docs/knowledge-graph/fah-backend.md) of why this client's wire
     format needs verifying live, not just read from source.
 
     "account" deliberately excludes "passkey" -- this flows into the

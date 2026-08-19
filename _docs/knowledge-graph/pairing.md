@@ -33,7 +33,7 @@ Two independent enrollment paths, both ending at
   hub browses mDNS continuously and, on `POST
   /api/discovery/{id}/pair`, dials the node directly to verify the code
   and hand over credentials. Full handshake diagram in
-  `docs/REQUIREMENTS.md` §6.
+  `_docs/REQUIREMENTS.md` §6.
 
 **Verified** (2026-08-11, local smoke test): both flows confirmed working
 end to end, including the LAN flow's mDNS advertise → browse → discover →

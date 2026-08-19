@@ -1,6 +1,6 @@
 """Optional read-only local status page for a single node machine --
 off by default (Config.local_ui_enabled), since nodes are meant to run
-unobtrusively on bulk-enrolled lab machines (see docs/REQUIREMENTS.md's
+unobtrusively on bulk-enrolled lab machines (see _docs/REQUIREMENTS.md's
 school use case). Whoever's sitting at the machine can opt it on with
 'grid-node local-ui enable' to see what's running/paused right now.
 

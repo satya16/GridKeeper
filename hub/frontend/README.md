@@ -3,7 +3,7 @@
 The hub's admin dashboard -- React + [Ant Design](https://ant.design/),
 built with Vite. Replaced an earlier server-rendered Jinja2 + vanilla-JS
 version on 2026-08-18; see
-[`knowledge-graph/dashboard-ui.md`](../../knowledge-graph/dashboard-ui.md)
+[`_docs/knowledge-graph/dashboard-ui.md`](../../_docs/knowledge-graph/dashboard-ui.md)
 in the repo root for why and what changed.
 
 Talks to the FastAPI backend (`hub/app/`) purely over the same REST
@@ -49,7 +49,7 @@ errors, confirms the BOINC/FAH collapsible forms actually open, and
 saves `verify-screenshot.png` (gitignored) for a visual check. Exists
 because "no display in this sandbox" was a recurring, documented gap
 across this project's UI work -- see the manual-verification notes in
-`docs/TESTING.md` -- this closes it for whatever a headless browser can
+`_docs/TESTING.md` -- this closes it for whatever a headless browser can
 check. It can't tell you if something *looks* good, only that it
 *rendered without breaking*; look at the screenshot for the rest.
 

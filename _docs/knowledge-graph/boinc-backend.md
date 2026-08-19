@@ -23,7 +23,7 @@ long-lived credential, unlike the hub's one-time pairing tokens. The
 hub (`hub/app/api/nodes.py::_redact_payload`) masks
 `account_key` before writing a command to the `commands` table or
 returning it from the command-lookup API, since that table is meant to
-be a durable audit log (`docs/REQUIREMENTS.md` section 9) — the real key
+be a durable audit log (`_docs/REQUIREMENTS.md` section 9) — the real key
 still reaches the node over the WebSocket at dispatch time, only what
 gets persisted/echoed back is redacted. If another sensitive field is
 ever added to any backend's payload, add it to

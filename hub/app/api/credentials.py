@@ -74,7 +74,7 @@ async def apply_credential(
 ) -> CommandOut:
     """Single-node apply -- attaches the saved key's project to one
     node. Fleet-wide/group apply is a deliberate follow-up, not this
-    endpoint's job (see knowledge-graph/credentials.md)."""
+    endpoint's job (see _docs/knowledge-graph/credentials.md)."""
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")

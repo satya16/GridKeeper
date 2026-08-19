@@ -17,13 +17,13 @@ every status frame (see [wire-protocol](wire-protocol.md)) rather than a
 separate channel. `hub/app/metrics_store.py` keeps an in-memory
 rolling window per node (~1 hour, `collections.deque`) — deliberately
 *not* persisted to SQLite; this is "recent live state," not the
-long-term historical analytics `docs/REQUIREMENTS.md` §2 puts out of
+long-term historical analytics `_docs/REQUIREMENTS.md` §2 puts out of
 scope.
 
 The dashboard renders three separate line charts (CPU%, RAM%, temp °C —
 never one dual-axis chart) with a per-device color assigned from a fixed
 8-slot categorical palette, a shared device filter, and a crosshair
-tooltip — see `docs/REQUIREMENTS.md` §8 for the full design rationale
+tooltip — see `_docs/REQUIREMENTS.md` §8 for the full design rationale
 (follows the project's `dataviz` skill). Temperature is effectively
 Linux-only (`psutil.sensors_temperatures()` isn't implemented on
 macOS/Windows) and degrades to `null` rather than erroring.

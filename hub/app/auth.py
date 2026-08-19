@@ -13,7 +13,7 @@ _basic = HTTPBasic()
 # Very small v1 auth story: a single admin password protects the dashboard
 # and REST API (HTTP Basic), nodes authenticate with a bearer token that
 # was minted during enrollment. Nothing here is meant to survive contact
-# with a multi-user future -- see docs/REQUIREMENTS.md section 6/9.
+# with a multi-user future -- see _docs/REQUIREMENTS.md section 6/9.
 
 ADMIN_PASSWORD_ENV = "GRIDKEEPER_ADMIN_PASSWORD"
 DEFAULT_ADMIN_PASSWORD = "changeme"

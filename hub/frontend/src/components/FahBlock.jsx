@@ -5,7 +5,7 @@ import { api } from '../api.js'
 // (the client itself substitutes "any" for that) -- fetched and confirmed
 // live 2026-08-18 against the same endpoint the official web-control
 // frontend (fah-web-client-bastet's CommonSettings.vue) calls. Static
-// here rather than fetched at runtime -- see knowledge-graph/fah-backend.md.
+// here rather than fetched at runtime -- see _docs/knowledge-graph/fah-backend.md.
 const FAH_CAUSES = ['any', 'alzheimers', 'cancer', 'covid-19', 'diabetes', 'huntingtons', 'influenza', 'parkinsons']
 
 function pct(fraction) {

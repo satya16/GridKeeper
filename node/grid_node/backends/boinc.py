@@ -5,7 +5,7 @@ directly over port 31416) trades a bit of parsing fragility for a lot of
 simplicity -- no RPC auth handshake to implement, and boinccmd is installed
 alongside boinc-client on every distro. If boinccmd's text output format
 turns out to vary across versions in practice, swap this for the RPC
-protocol (see docs/REQUIREMENTS.md section 4) without touching callers --
+protocol (see _docs/REQUIREMENTS.md section 4) without touching callers --
 they only see the dict shapes returned below.
 """
 
@@ -73,7 +73,7 @@ def _parse_blocks(text: str) -> dict[str, list[dict[str, str]]]:
             # which repeat field names like "name"/"URL" for the link itself --
             # confirmed live 2026-08-18 against Einstein@Home, where the last
             # GUI URL's name ("GEO600 project") was clobbering the real
-            # project name before this fix (see knowledge-graph/boinc-backend.md)
+            # project name before this fix (see _docs/knowledge-graph/boinc-backend.md)
             current_block.setdefault(key.strip(), value.strip())
     return sections
 
@@ -131,7 +131,7 @@ def get_status() -> dict:
 
     cc_status = _run("--get_cc_status")
     # Confirmed live 2026-08-18 against a real daemon (BOINC 8.2.15,
-    # official release build -- see knowledge-graph/boinc-backend.md):
+    # official release build -- see _docs/knowledge-graph/boinc-backend.md):
     # --get_cc_status has no "task mode:" line at all in this version.
     # Run mode lives under the "CPU status" section as "current mode:"
     # (that section comes first, before "GPU status"/"Network status",

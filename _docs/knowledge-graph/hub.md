@@ -22,12 +22,12 @@ Auth is intentionally minimal for v1: a single shared admin password via
 HTTP Basic (`auth.py::require_admin`) gates the dashboard and REST API;
 nodes authenticate their WebSocket with a per-node bearer token
 minted at enrollment (see [pairing](pairing.md)). No multi-user/RBAC —
-see `docs/REQUIREMENTS.md` §2 (Non-goals) and §9 (Security).
+see `_docs/REQUIREMENTS.md` §2 (Non-goals) and §9 (Security).
 
 Runs via `uvicorn app.main:app`, no systemd unit of its own yet (the
-node has one, the hub doesn't — open item, `docs/REQUIREMENTS.md`
+node has one, the hub doesn't — open item, `_docs/REQUIREMENTS.md`
 §10). Can run on the same machine as a node it manages — see
-`docs/REQUIREMENTS.md` §3.
+`_docs/REQUIREMENTS.md` §3.
 
 **Verified** (2026-08-11, local smoke test): boots cleanly including the
 mDNS discovery registry startup/shutdown hooks; auth gate returns 401
