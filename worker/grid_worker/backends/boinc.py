@@ -108,7 +108,14 @@ def get_status() -> dict:
         )
 
     cc_status = _run("--get_cc_status")
-    run_mode = _find_field(cc_status, "task mode") or "unknown"
+    # Confirmed live 2026-08-18 against a real daemon (BOINC 8.2.15,
+    # official release build -- see knowledge-graph/boinc-backend.md):
+    # --get_cc_status has no "task mode:" line at all in this version.
+    # Run mode lives under the "CPU status" section as "current mode:"
+    # (that section comes first, before "GPU status"/"Network status",
+    # each of which also has their own "current mode:" line -- this
+    # regex matches the first occurrence, i.e. CPU's).
+    run_mode = _find_field(cc_status, "current mode") or "unknown"
 
     return {"run_mode": run_mode, "projects": projects, "tasks": tasks}
 

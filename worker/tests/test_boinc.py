@@ -25,11 +25,29 @@ SAMPLE_GUI_INFO = """
    fraction done: 0.100000
 """
 
+# Real output, confirmed live 2026-08-18 against BOINC 8.2.15 (official
+# release build) -- boinccmd --get_cc_status has no "task mode:" line at
+# all; run mode lives under "CPU status" as "current mode:". Originally
+# written from documentation/memory as "task mode: auto" under a
+# "======== Client status ========" header, which never matched any real
+# output -- see knowledge-graph/boinc-backend.md.
 SAMPLE_CC_STATUS = """
-======== Client status ========
-task mode: auto
-task mode perm: auto
-network mode: auto
+network connection status: don't need connection
+CPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+GPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+Network status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
 """
 
 
@@ -50,7 +68,10 @@ def test_parse_blocks_tasks():
 
 
 def test_find_field():
-    assert boinc._find_field(SAMPLE_CC_STATUS, "task mode") == "auto"
+    # Matches the CPU section's "current mode" -- the first occurrence in
+    # the text, since CPU status comes before GPU/Network status and all
+    # three sections share the same field name.
+    assert boinc._find_field(SAMPLE_CC_STATUS, "current mode") == "according to prefs"
     assert boinc._find_field(SAMPLE_CC_STATUS, "nonexistent field") is None
 
 
@@ -75,7 +96,7 @@ def test_get_status_end_to_end(monkeypatch):
     monkeypatch.setattr(boinc, "_run", fake_run)
     status = boinc.get_status()
 
-    assert status["run_mode"] == "auto"
+    assert status["run_mode"] == "according to prefs"
     assert len(status["projects"]) == 2
     assert status["projects"][0]["suspended"] is False
     assert status["projects"][1]["suspended"] is True

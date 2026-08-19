@@ -1,7 +1,7 @@
 ---
 id: boinc-backend
 type: component
-status: implemented-untested
+status: implemented-verified
 files:
   - worker/grid_worker/backends/boinc.py
 relates_to: [worker, scheduling]
@@ -132,3 +132,61 @@ were checked against real `boinccmd --help` output, but the daemon-hang
 bug above means neither command has been exercised against a real
 running BOINC client yet — that verification is blocked on the same
 unresolved daemon issue as everything else in this file.
+
+## RESOLVED 2026-08-18: swapped Ubuntu's package for BOINC's own official build
+
+The daemon-hang bug above is fixed — the fix was option (b)'s spirit
+("less stale build") but via a different, better source than a PPA:
+**BOINC's own GitHub Releases** publish official pre-built `.deb`
+packages per Ubuntu codename, including one built for this exact release
+("resolute") — `client_release/8.2/8.2.15` on
+[github.com/BOINC/boinc/releases](https://github.com/BOINC/boinc/releases),
+i.e. `boinc-client_8.2.15-4612_amd64_resolute.deb`. Same package name as
+the broken apt package, so `sudo dpkg -i` cleanly replaced it in place —
+same package name, own systemd unit (self-consistent, points at its own
+`/usr/local/bin/boinc` and `/var/lib/boinc`, adds some sandboxing
+Ubuntu's older unit lacked), no source compilation needed. This was
+deliberately chosen over building from source or a random PPA — "use
+what BOINC's own project already builds and ships," matching how the FAH
+blocker was solved by installing `fah-client` from foldingathome.org's
+own release server instead of Ubuntu's package.
+
+Verified thoroughly, same day: `boinccmd --get_cc_status` /
+`--get_simple_gui_info` now return real output instantly and reliably
+(confirmed across many repeated calls, in both a normal user terminal —
+independently, not just through automation — and this project's usual
+tooling) — the `EINTR`-then-never-retry bug traced via `strace` in the
+8.2.9 build genuinely does not reproduce in 8.2.15. `suspend_all()` /
+`resume_all()` confirmed to actually change daemon state (`--set_run_mode
+never`/`auto`, verified via `--get_cc_status` before/after), round-tripped
+through `worker.py`'s real `_execute_command` dispatch path, not just
+called directly.
+
+**Found and fixed a real parsing bug along the way**, same pattern as
+the FAH `wu`-vs-`assignment` field mistake: `get_status()`'s `run_mode`
+was reading a `"task mode:"` line from `--get_cc_status` that doesn't
+exist in this client's output at all — the real output has no
+single top-level mode line, only per-section `"current mode:"` lines
+under `"CPU status"` / `"GPU status"` / `"Network status"` (in that
+order; the regex match is CPU's, which is what we want). Was silently
+returning `"unknown"` every time, untested because the daemon-hang bug
+made this whole code path unreachable until now. Fixed; `run_mode` now
+reports BOINC's own real phrasing (e.g. `"according to prefs"` for the
+default/auto state, not literally the word `"auto"` — that's the
+*command* value you send, not the *status* phrasing BOINC reports back).
+Test fixtures in `worker/tests/test_boinc.py` (`SAMPLE_CC_STATUS`)
+replaced with the real captured output rather than the invented format
+that was there before.
+
+**Still not verified**, since it needs real BOINC-project credentials
+this machine doesn't have (see [[grid_manager_boinc_attach_detach]]):
+`attach_project`/`detach_project` against a real project, and by
+extension the `Projects`/`Tasks` block-parsing in `get_status()` against
+real (non-empty) data — `_parse_blocks()`'s field names
+(`"manager URL"`, `"suspended via GUI"`, `"active_task_state"`, etc.)
+are still exactly as originally written from documentation/memory, never
+checked against real output. `apply_schedule()`'s
+`global_prefs_override.xml` effect on real Activity behavior is also
+still unverified. Given the daemon now actually works, these are all
+newly *reachable* to verify, just not yet done — the real blocker was
+never these, it was the daemon being unusable at all.

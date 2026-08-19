@@ -98,50 +98,54 @@ actually pausing/resuming FAH on an hours/idle boundary specifically
 but the loop itself — reacting to a real schedule boundary — hasn't been
 watched live).
 
+### Real BOINC — last verified 2026-08-18 ✅ (mostly)
+
+Attempted 2026-08-13, blocked, re-confirmed broken twice more on
+2026-08-18 (fresh daemon start, then a full restart — same `EINTR`-on-
+`recvfrom()`-then-never-retry hang traced via `strace` both times).
+**Resolved same day, later on**: swapped Ubuntu's stale `boinc-client`
+package (`8.2.9+dfsg-1build1`, universe repo) for BOINC's own official
+pre-built release — `client_release/8.2/8.2.15` from
+[github.com/BOINC/boinc/releases](https://github.com/BOINC/boinc/releases),
+built specifically for this Ubuntu codename (`resolute`). `sudo dpkg -i`
+over the existing package (same package name, clean replace, own
+self-consistent systemd unit). The hang genuinely does not reproduce in
+8.2.15 — confirmed via many repeated `boinccmd --get_cc_status` calls,
+independently in a real user terminal (not just this project's
+automation) and this project's usual tooling. `suspend_all()`/
+`resume_all()` confirmed to actually change daemon state, round-tripped
+through the real `worker.py` dispatch path. Along the way, found and
+fixed a real parsing bug this unblocked testing: `get_status()`'s
+`run_mode` was reading a `"task mode:"` line that doesn't exist in this
+client's `--get_cc_status` output at all (real field is `"current mode:"`
+under a `"CPU status"` section) — was silently always `"unknown"`,
+untested because the daemon-hang bug made this code path unreachable
+until now. Full story: `knowledge-graph/boinc-backend.md`. Still open:
+`attach_project`/`detach_project` against a real project (this machine
+has no BOINC project account), and by extension the `Projects`/`Tasks`
+block-parsing in `get_status()` against real non-empty data — those
+field names (`"manager URL"`, `"suspended via GUI"`, etc.) are still
+exactly as originally written from documentation/memory, never checked
+live. `apply_schedule()`'s real effect on BOINC's Activity behavior is
+also still unverified.
+
 ### Still open — needs real hardware/environment
 
-- [ ] **Real BOINC** — attempted 2026-08-13, blocked, **re-confirmed
-      twice more on 2026-08-18** (fresh `systemctl enable --now
-      boinc-client`, then again after a full `systemctl restart` later
-      the same day — same hang both times, new daemon PID each time). The
-      second re-check added an `strace` narrowing: `boinccmd` sends a
-      correct request and gets `EINTR` on `recvfrom()` almost
-      immediately, then makes no further syscalls at all until killed --
-      may implicate `boinccmd`'s own retry logic, not only the daemon.
-      Full trace: `knowledge-graph/boinc-backend.md`. Ubuntu's
-      `boinc-client` package (`8.2.9+dfsg-1build1`) has a reproducible,
-      inconsistent GUI RPC daemon bug on real (non-VM) hardware, confirmed
-      across a clean purge+reinstall with AppArmor ruled out. The `snap`
-      alternative doesn't ship `boinccmd`. No newer package version exists
-      in Ubuntu's archive to upgrade into (`apt-cache madison` checked
-      2026-08-18). Full details, including the three unblock options if
-      picked up again: `knowledge-graph/boinc-backend.md`. Once a working
-      `boinccmd` is available somewhere: confirm `get_status()` parses
-      real `boinccmd --get_simple_gui_info`/`--get_cc_status` output
-      (compare field-by-field against `boinccmd`'s raw output, since this
-      parser was written from documentation/memory, not a live sample —
-      see `worker/grid_worker/backends/boinc.py`'s module docstring), and
-      that `suspend_project`/`resume_project`/`suspend_all`/`resume_all`
-      actually change BOINC's state. Then set a schedule policy with
-      `only_when_idle` and/or `restrict_hours` and confirm
-      `apply_schedule()`'s `global_prefs_override.xml` actually changes
-      BOINC Manager's Activity behavior.
-- [ ] **Dashboard in a real browser**: load `/`, confirm the worker
-      cards, discovery panel, and fleet-schedule form render and their
-      buttons/forms actually work (not just that the HTML skeleton is
-      correct, which is all `TestClient` can confirm). Specifically the
-      "Live metrics" charts per the `dataviz` skill's own "render it and
-      look at it" step — label collisions, tooltip behavior, the device
-      filter's 8-series cap, dark-mode contrast.
+- [ ] **BOINC project attach/detach + non-empty status parsing** — see
+      above; needs a real BOINC project account, which this machine
+      doesn't have.
 - [ ] **Worker local status page in a real browser** (added 2026-08-18,
       see `knowledge-graph/worker-local-ui.md`): confirmed over real HTTP
       with real backend/metrics data from a real machine, but never
-      actually painted by a browser — same "no display in this sandbox"
-      gap as the dashboard above.
+      actually painted by a browser. (The *manager* dashboard's
+      equivalent gap is resolved — see `knowledge-graph/dashboard-ui.md`;
+      this one's different code, stdlib Python `http.server`, not React,
+      and hasn't had the same Playwright pass yet.)
 - [ ] **LAN pairing across two separate machines** (this project's test
       so far had worker and manager as two processes on one host, so
       mDNS multicast never had to cross a real network segment/router).
 - [ ] **The `dataviz` palette validator** (`node
-      scripts/validate_palette.js` from the skill's directory) — still
-      blocked on no `node` in every environment this has been worked on
-      so far.
+      scripts/validate_palette.js` from the skill's directory) — `node`
+      turned out to be available via `nvm` after all (found 2026-08-18,
+      just not always on `PATH`); this script specifically still hasn't
+      actually been run, just newly unblocked.

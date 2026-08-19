@@ -144,5 +144,9 @@ pausing/resuming stays a manager-dashboard action.
   its own native preferences file rewritten (`boinccmd
   --set_global_prefs_override`), FAH gets paused/resumed by the worker
   itself on a 60s check loop. The policy push/persist/reconnect path is
-  confirmed working; the actual `boinccmd`/FAH enforcement calls have not
-  been exercised against a live BOINC/FAH install yet.
+  confirmed working, and so are the underlying commands each side uses
+  (BOINC's `suspend_all`/`resume_all`, FAH's `pause`/`unpause`) against
+  live installs -- what's not yet verified is `apply_schedule()`'s
+  `global_prefs_override.xml` actually changing BOINC's real Activity
+  behavior, or watching FAH's 60s enforcement loop cross a real
+  hours/idle boundary live.

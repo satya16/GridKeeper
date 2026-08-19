@@ -63,8 +63,8 @@ add an edge, add it on both ends.
 | [scheduling](scheduling.md) | component | untested* | hours/idle policy enforcement |
 | [metrics](metrics.md) | component | verified | CPU/RAM/temperature collection + live charts |
 | [dashboard-ui](dashboard-ui.md) | component | verified | the React + Ant Design web dashboard |
-| [boinc-backend](boinc-backend.md) | component | untested* | BOINC control via `boinccmd` |
-| [fah-backend](fah-backend.md) | component | verified† | Folding@home control via its WebSocket API |
+| [boinc-backend](boinc-backend.md) | component | verified‡ | BOINC control via `boinccmd` |
+| [fah-backend](fah-backend.md) | component | verified | Folding@home control via its WebSocket API |
 | [worker-local-ui](worker-local-ui.md) | component | untested* | optional per-machine read-only status page, off by default |
 | [testing](testing.md) | process | verified | the automated test suites + manual checklist |
 
@@ -72,21 +72,24 @@ add an edge, add it on both ends.
 exercised. As of 2026-08-11: the wire plumbing works end to end for all
 five; what was unverified then was browser-side chart/UI behavior (no
 display) and actual BOINC/FAH interaction (neither installed in the test
-environment). Browser-side UI is no longer a factor as of 2026-08-18 —
-see [dashboard-ui](dashboard-ui.md); what's left under this mark is
-narrower: [boinc-backend](boinc-backend.md)'s actual `boinccmd`
-interaction (still blocked on a real daemon bug) and
-[scheduling](scheduling.md)'s enforcement specifically on BOINC (same
-blocker) — FAH's side of both is resolved, see †.
+environment). Both of those are resolved now (browser-side as of
+2026-08-18, see [dashboard-ui](dashboard-ui.md); BOINC/FAH interaction
+also 2026-08-18, see boinc-backend/fah-backend below) — what's left under
+this mark is narrower: [scheduling](scheduling.md)'s enforcement
+specifically on BOINC (`apply_schedule()`'s real effect on Activity
+behavior was never checked, though the daemon it'd talk to now actually
+works) and FAH's enforcement loop reacting to a real schedule boundary
+live (the underlying pause/unpause calls it uses are verified, the loop
+itself hasn't been watched crossing a boundary).
 
-† partially verified differently: as of 2026-08-18, real hardware with a
-real FAHClient 8.1.18 daemon confirmed connection, status reporting, and
-global pause/unpause end to end (round-tripped through the actual
-`worker.py` command-dispatch path). What's still unverified is the
-per-work-unit field mapping (`project`/`progress`) against a real,
-actively-folding work unit — this machine has no FAH account linked so
-never received one. See [fah-backend](fah-backend.md) for the full story,
-including a live protocol-version mismatch against the GitHub source.
+‡ [boinc-backend](boinc-backend.md)'s long-standing daemon-hang bug is
+resolved as of 2026-08-18 (swapped Ubuntu's stale package for BOINC's own
+official release build) — status/command path now genuinely verified
+live, including a real parsing bug this unblocked finding and fixing
+(`run_mode` was silently always "unknown"). Still unverified: attach/detach
+and the `Projects`/`Tasks` block-parsing against a *real* attached
+project — this machine has no BOINC project account, so that data has
+never existed to parse. See the entity for the full story.
 
 ## Maintaining this
 
