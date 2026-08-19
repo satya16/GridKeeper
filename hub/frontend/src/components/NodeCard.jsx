@@ -44,8 +44,8 @@ export function NodeCard({ node, onChanged }) {
         onClick={handleSetGroup}
         style={{
           background: 'transparent',
-          border: '1px dashed #2a2e38',
-          color: '#8a8f98',
+          border: '1px dashed var(--gk-border)',
+          color: 'var(--gk-muted)',
           borderRadius: 999,
           padding: '2px 10px',
           fontSize: '0.75rem',

@@ -1,9 +1,11 @@
 /* Domain-specific styling antd doesn't provide -- ported from the
    previous dashboard.css. Layout chrome (cards, buttons, forms, layout)
-   uses antd components + the dark theme tokens in main.jsx instead. */
+   uses antd components + the theme tokens in main.jsx instead. Colors
+   here use the CSS variables from index.css (--gk-*) so this all stays
+   correct in both dark and light mode, not just antd's own components. */
 
 .muted {
-  color: #8a8f98;
+  color: var(--gk-muted);
   font-size: 0.85rem;
 }
 
@@ -15,13 +17,13 @@
   margin-right: 0.4rem;
 }
 .dot.online {
-  background: #3ecf8e;
+  background: var(--gk-success);
 }
 .dot.offline {
-  background: #8a8f98;
+  background: var(--gk-muted);
 }
 .dot.warn {
-  background: #f2a93c;
+  background: var(--gk-warning);
 }
 
 .task-row {
@@ -45,14 +47,14 @@
 
 .progress-bar {
   height: 4px;
-  background: #2a2e38;
+  background: var(--gk-border);
   border-radius: 2px;
   overflow: hidden;
   margin-top: 2px;
 }
 .progress-bar > div {
   height: 100%;
-  background: #4f8cff;
+  background: var(--gk-accent);
 }
 
 .swatch {
@@ -69,7 +71,7 @@
   gap: 0.5rem 0.9rem;
   margin-top: 0.5rem;
   font-size: 0.78rem;
-  color: #8a8f98;
+  color: var(--gk-muted);
 }
 .chart-legend-item {
   display: inline-flex;
@@ -100,8 +102,8 @@
   top: 0.5rem;
   right: 0.5rem;
   pointer-events: none;
-  background: #1a1a19;
-  border: 1px solid #2a2e38;
+  background: var(--gk-tooltip-bg);
+  border: 1px solid var(--gk-border);
   border-radius: 6px;
   padding: 0.4rem 0.55rem;
   font-size: 0.75rem;
@@ -114,7 +116,7 @@
   opacity: 1;
 }
 .chart-tooltip .tt-time {
-  color: #8a8f98;
+  color: var(--gk-muted);
   margin-bottom: 0.25rem;
 }
 .chart-tooltip .tt-row {
@@ -145,8 +147,8 @@
   font-size: 0.8rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  border: 1px solid #2a2e38;
-  background: #171a21;
+  border: 1px solid var(--gk-border);
+  background: var(--gk-card-bg);
   cursor: pointer;
 }
 .metrics-filter label.disabled {
@@ -192,8 +194,8 @@
   align-items: center;
   padding: 0 1.25rem;
   overflow: hidden;
-  color: #e6e8eb;
-  border-bottom: 1px solid #2a2e38;
+  color: var(--gk-text);
+  border-bottom: 1px solid var(--gk-border);
 }
 
 /* Layout.Sider is `position: relative` unconditionally in antd (checked
@@ -234,7 +236,7 @@
 .section-header h2 {
   font-size: 0.95rem;
   margin: 0;
-  color: #8a8f98;
+  color: var(--gk-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

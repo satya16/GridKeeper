@@ -157,3 +157,54 @@ switch above: `newContext({ httpCredentials })` no longer applies
 anything, since there's no Basic challenge to answer -- it now drives
 the real login form (fill password, click "Log in") before running any
 checks, on both the desktop and mobile browser contexts.
+
+**No separate header bar; every page is a Tabs component 2026-08-19**
+(same day, second follow-up): user feedback was that a distinct colored
+strip above each page's own tabs read as "one bar too many," and that
+Credentials/Metrics (no sub-tabs of their own) should be structurally
+consistent with Fleet rather than a special-cased plain row. Landed on
+antd's actual primitive for this -- `Tabs`' `tabBarExtraContent` prop
+(`{left, right}`, confirmed by reading `@rc-component/tabs`' type defs,
+which is what antd's `Tabs` wraps) -- so the sider toggle, theme toggle,
+and logout button all live directly in whichever page's own tab bar
+row, not a separate `Layout.Header`. Credentials and Metrics each got
+wrapped in a single-tab `Tabs` (labelled "Credentials"/"Metrics") purely
+so they share this same mechanism -- `App.jsx` builds one
+`tabBarExtraContent` object and passes it to all three pages'
+`Tabs`/`FleetPage`, so the row is identical everywhere. `.page-topbar`
+(the earlier special-case CSS for tab-less pages) removed entirely as
+now-dead code.
+
+**Light/dark theme toggle added same day**: `main.jsx`'s `Root`
+component now owns `themeMode` state (persisted to
+`localStorage['gridkeeper-theme']`), switching antd's `ConfigProvider`
+between `theme.darkAlgorithm`/`theme.defaultAlgorithm` plus 5 base
+tokens (bg/container/border/text/textSecondary) -- semantic colors
+(accent/success/warning/error) are deliberately identical in both,
+since they're only ever used as small fills (status dots, progress
+bars), not body text, so they don't need a second contrast-validated
+set. Critically, this app has real custom CSS beyond what antd's
+algorithm reaches (App.css's dots/task-rows/chart SVGs, plus
+`LineChart.jsx`'s hand-drawn SVG stroke/fill colors) -- `index.css` now
+defines the same palette as CSS variables (`--gk-bg`, `--gk-card-bg`,
+`--gk-border`, `--gk-text`, `--gk-muted`, `--gk-tooltip-bg`,
+`--gk-chart-point-ring`) under `:root`/`:root[data-theme="light"]`,
+toggled by setting `data-theme` on `<html>`; App.css and LineChart.jsx's
+inline SVG `stroke`/`fill` attributes were converted from hardcoded hex
+to `var(--gk-*)` (confirmed CSS custom properties work fine as SVG
+presentation-attribute values for inline SVG in an HTML document).
+
+Real bug found and fixed via screenshot, not assumed: `Layout.Sider`
+has its own `siderBg` component token (`node_modules/antd/es/layout/
+style/index.js`) that does **not** follow the global algorithm --
+defaults to a fixed navy (`#001529`) regardless of light/dark, so
+toggling to light mode left the sider still dark while its own text
+(via `var(--gk-text)`, which *did* follow the toggle) went
+light-mode-dark-on-dark and became nearly unreadable. Fix: antd's
+`Layout.Sider` and `Menu` both accept their own `theme` prop
+(`"dark"`/`"light"`, conveniently the same strings as this app's
+`themeMode` state) independent of `ConfigProvider`'s algorithm --
+passing `theme={themeMode}` to both makes the sider genuinely follow
+the toggle. Verified via Playwright in both themes, at both viewport
+sizes, plus a toggle-then-reload check confirming `localStorage`
+persistence actually works.

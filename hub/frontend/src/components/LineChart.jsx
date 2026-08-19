@@ -74,10 +74,10 @@ export function LineChart({ title, series, windowSeconds, yMin = 0, yMax: yMaxOp
     const v = yMin + ((yMax - yMin) * i) / GRID_STEPS
     const yPix = yScale(v)
     gridLines.push(
-      <line key={i} x1={PAD_LEFT} y1={yPix} x2={WIDTH - PAD_RIGHT} y2={yPix} stroke="#2a2e38" strokeWidth={1} />,
+      <line key={i} x1={PAD_LEFT} y1={yPix} x2={WIDTH - PAD_RIGHT} y2={yPix} stroke="var(--gk-border)" strokeWidth={1} />,
     )
     axisLabels.push(
-      <text key={i} x={PAD_LEFT - 6} y={yPix + 3} textAnchor="end" fontSize={9} fill="#8a8f98">
+      <text key={i} x={PAD_LEFT - 6} y={yPix + 3} textAnchor="end" fontSize={9} fill="var(--gk-muted)">
         {Math.round(v)}
         {unitShort}
       </text>,
@@ -93,7 +93,7 @@ export function LineChart({ title, series, windowSeconds, yMin = 0, yMax: yMaxOp
     const lastPoint = [...s.points].reverse().find((p) => p.v !== null && p.v !== undefined)
     if (lastPoint) {
       endpoints.push(
-        <circle key={s.id} cx={xScale(lastPoint.t)} cy={yScale(lastPoint.v)} r={4} fill={s.color} stroke="#1a1a19" strokeWidth={2} />,
+        <circle key={s.id} cx={xScale(lastPoint.t)} cy={yScale(lastPoint.v)} r={4} fill={s.color} stroke="var(--gk-chart-point-ring)" strokeWidth={2} />,
       )
     }
   }
@@ -140,7 +140,7 @@ export function LineChart({ title, series, windowSeconds, yMin = 0, yMax: yMaxOp
           onPointerMove={handleMove}
           onPointerLeave={() => setHover(null)}
         />
-        {hover && <line x1={hover.svgX} y1={PAD_TOP} x2={hover.svgX} y2={PAD_TOP + PLOT_H} stroke="#8a8f98" strokeWidth={1} />}
+        {hover && <line x1={hover.svgX} y1={PAD_TOP} x2={hover.svgX} y2={PAD_TOP + PLOT_H} stroke="var(--gk-muted)" strokeWidth={1} />}
       </svg>
 
       {hover && (

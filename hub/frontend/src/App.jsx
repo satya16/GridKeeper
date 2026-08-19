@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Layout, Menu, Typography } from 'antd'
+import { Layout, Menu, Space, Tabs, Typography } from 'antd'
 import { api, setUnauthorizedHandler } from './api.js'
 import { usePolling } from './usePolling.js'
-import { Header } from './components/Header.jsx'
+import { SiderToggle } from './components/SiderToggle.jsx'
+import { ThemeToggle } from './components/ThemeToggle.jsx'
+import { LogoutButton } from './components/LogoutButton.jsx'
 import { LoginForm } from './components/LoginForm.jsx'
 import { CredentialsSection } from './components/CredentialsSection.jsx'
 import { MetricsSection } from './components/MetricsSection.jsx'
@@ -25,7 +27,7 @@ const PAGES = [
   { key: 'metrics', label: 'Metrics' },
 ]
 
-export default function App() {
+export default function App({ themeMode, onToggleTheme }) {
   // null = still checking on load, so the login form doesn't flash
   // before the session check comes back.
   const [authenticated, setAuthenticated] = useState(null)
@@ -67,10 +69,26 @@ export default function App() {
     if (window.innerWidth <= MOBILE_BREAKPOINT_PX) setSiderCollapsed(true)
   }
 
+  // Every page is a Tabs component (even Credentials/Metrics, which only
+  // have one tab each) so the sider toggle, theme toggle, and logout
+  // button always live in the same place via tabBarExtraContent -- one
+  // consistent topmost bar per page, not a separate app-wide header
+  // stacked above whatever the page itself shows.
+  const tabBarExtraContent = {
+    left: <SiderToggle collapsed={siderCollapsed} onClick={() => setSiderCollapsed((c) => !c)} />,
+    right: (
+      <Space size="small">
+        <ThemeToggle themeMode={themeMode} onToggle={onToggleTheme} />
+        <LogoutButton onClick={handleLogout} />
+      </Space>
+    ),
+  }
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       {!siderCollapsed && <div className="sider-backdrop" onClick={() => setSiderCollapsed(true)} />}
       <Layout.Sider
+        theme={themeMode}
         collapsible
         collapsed={siderCollapsed}
         onCollapse={setSiderCollapsed}
@@ -78,11 +96,10 @@ export default function App() {
         breakpoint="lg"
         collapsedWidth={0}
       >
-        {/* "Logo" block, same height as the content-side Header so the two
-            align -- the standard admin-layout pattern (Ant Design Pro's own
-            reference layout does exactly this): brand in the sider's own
-            top-left corner, above the nav, collapse trigger lives in the
-            main header instead. */}
+        {/* "Logo" block, same height as a standard antd header (64px) so it
+            aligns with each page's own tab bar -- the standard admin-layout
+            pattern (Ant Design Pro's own reference layout does exactly
+            this): brand in the sider's own top-left corner, above the nav. */}
         <div className="sider-brand">
           <Typography.Title level={4} style={{ margin: 0, color: 'inherit', whiteSpace: 'nowrap' }}>
             GridKeeper
@@ -90,28 +107,36 @@ export default function App() {
         </div>
         <Menu
           mode="inline"
+          theme={themeMode}
           style={{ height: '100%' }}
           selectedKeys={[page]}
           items={PAGES}
           onClick={({ key }) => selectPage(key)}
         />
       </Layout.Sider>
-      <Layout>
-        <Layout.Header style={{ padding: '0 1.5rem' }}>
-          <Header
-            siderCollapsed={siderCollapsed}
-            onToggleSider={() => setSiderCollapsed((c) => !c)}
-            onLogout={handleLogout}
+      <Layout.Content className="app-content">
+        {page === 'fleet' && (
+          <FleetPage nodes={nodes || []} groups={groups || []} onChanged={onChanged} tabBarExtraContent={tabBarExtraContent} />
+        )}
+        {page === 'credentials' && (
+          <Tabs
+            tabBarExtraContent={tabBarExtraContent}
+            items={[
+              {
+                key: 'credentials',
+                label: 'Credentials',
+                children: <CredentialsSection nodes={nodes || []} groups={groups || []} onNodeChanged={refreshNodes} />,
+              },
+            ]}
           />
-        </Layout.Header>
-        <Layout.Content className="app-content">
-          {page === 'fleet' && <FleetPage nodes={nodes || []} groups={groups || []} onChanged={onChanged} />}
-          {page === 'credentials' && (
-            <CredentialsSection nodes={nodes || []} groups={groups || []} onNodeChanged={refreshNodes} />
-          )}
-          {page === 'metrics' && <MetricsSection />}
-        </Layout.Content>
-      </Layout>
+        )}
+        {page === 'metrics' && (
+          <Tabs
+            tabBarExtraContent={tabBarExtraContent}
+            items={[{ key: 'metrics', label: 'Metrics', children: <MetricsSection /> }]}
+          />
+        )}
+      </Layout.Content>
     </Layout>
   )
 }

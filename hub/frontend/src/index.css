@@ -1,11 +1,44 @@
+/* Theme tokens as CSS variables, not just antd's own ConfigProvider
+   tokens (main.jsx) -- this app also has real custom CSS (App.css: dots,
+   task rows, chart SVGs, the sider brand block) that antd's algorithm
+   has no reach into. Dark is the default/root palette (matches what
+   shipped before the toggle existed); light overrides live under
+   [data-theme="light"], toggled by App.jsx onto <html>. Semantic colors
+   (accent/success/warning/error) are deliberately the same in both --
+   they're used as small fills (dots, progress bars), not body text, so
+   dark-mode contrast tuning carries over fine and doesn't need a second
+   validated set. */
+:root {
+  --gk-bg: #0f1115;
+  --gk-card-bg: #171a21;
+  --gk-border: #2a2e38;
+  --gk-text: #e6e8eb;
+  --gk-muted: #8a8f98;
+  --gk-tooltip-bg: #1a1a19;
+  --gk-chart-point-ring: #1a1a19;
+  --gk-accent: #4f8cff;
+  --gk-success: #3ecf8e;
+  --gk-warning: #f2a93c;
+  --gk-error: #f2545b;
+}
+:root[data-theme='light'] {
+  --gk-bg: #f4f5f7;
+  --gk-card-bg: #ffffff;
+  --gk-border: #e0e2e8;
+  --gk-text: #1b1e25;
+  --gk-muted: #666d7a;
+  --gk-tooltip-bg: #ffffff;
+  --gk-chart-point-ring: #ffffff;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #0f1115;
-  color: #e6e8eb;
+  background: var(--gk-bg);
+  color: var(--gk-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* Last-resort net, not the fix itself -- the actual overflow sources
      (fixed-width grid tracks, unwrapped flex rows) are addressed where
