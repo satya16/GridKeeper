@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ClusterOutlined, KeyOutlined, LineChartOutlined } from '@ant-design/icons'
 import { Layout, Menu, Space, Tabs, Typography } from 'antd'
 import { api, setUnauthorizedHandler } from './api.js'
 import { usePolling } from './usePolling.js'
@@ -20,11 +21,16 @@ const GROUPS_REFRESH_INTERVAL_MS = 5000
 // unconditionally), so opening it on a narrow screen without this would
 // just push page content off-screen instead of floating over it.
 const MOBILE_BREAKPOINT_PX = 767
+// antd's own default icon-rail width when a Sider is collapsed but not
+// hidden -- used on desktop; mobile still collapses to 0 (fully hidden,
+// replaced by the overlay+backdrop) since a permanent icon rail eating
+// screen width makes less sense on a phone.
+const SIDER_ICON_RAIL_WIDTH = 80
 
 const PAGES = [
-  { key: 'fleet', label: 'Fleet' },
-  { key: 'credentials', label: 'Credentials' },
-  { key: 'metrics', label: 'Metrics' },
+  { key: 'fleet', label: 'Fleet', icon: <ClusterOutlined /> },
+  { key: 'credentials', label: 'Credentials', icon: <KeyOutlined /> },
+  { key: 'metrics', label: 'Metrics', icon: <LineChartOutlined /> },
 ]
 
 export default function App({ themeMode, onToggleTheme }) {
@@ -33,6 +39,7 @@ export default function App({ themeMode, onToggleTheme }) {
   const [authenticated, setAuthenticated] = useState(null)
   const [page, setPage] = useState('fleet')
   const [siderCollapsed, setSiderCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT_PX)
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthenticated(false))
@@ -40,6 +47,16 @@ export default function App({ themeMode, onToggleTheme }) {
       .checkSession()
       .then(() => setAuthenticated(true))
       .catch(() => setAuthenticated(false))
+  }, [])
+
+  useEffect(() => {
+    // Reactive, not just checked at click-time (selectPage below still does
+    // that for the "close on navigate" case) -- collapsedWidth needs to be
+    // correct immediately if the window is resized across the breakpoint
+    // while the sider's already open, not just on the next interaction.
+    const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT_PX)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [])
 
   const { data: nodes, refresh: refreshNodes } = usePolling(api.listNodes, authenticated ? NODES_REFRESH_INTERVAL_MS : null)
@@ -94,20 +111,24 @@ export default function App({ themeMode, onToggleTheme }) {
         onCollapse={setSiderCollapsed}
         trigger={null}
         breakpoint="lg"
-        collapsedWidth={0}
+        collapsedWidth={isMobile ? 0 : SIDER_ICON_RAIL_WIDTH}
       >
         {/* "Logo" block, same height as a standard antd header (64px) so it
             aligns with each page's own tab bar -- the standard admin-layout
             pattern (Ant Design Pro's own reference layout does exactly
-            this): brand in the sider's own top-left corner, above the nav. */}
+            this): brand in the sider's own top-left corner, above the nav.
+            Collapses to a "GK" monogram on desktop's icon rail rather than
+            disappearing, matching the nav items below it (full label -> icon
+            + hover tooltip, not label -> nothing). */}
         <div className="sider-brand">
           <Typography.Title level={4} style={{ margin: 0, color: 'inherit', whiteSpace: 'nowrap' }}>
-            GridKeeper
+            {siderCollapsed && !isMobile ? 'GK' : 'GridKeeper'}
           </Typography.Title>
         </div>
         <Menu
           mode="inline"
           theme={themeMode}
+          inlineCollapsed={siderCollapsed && !isMobile}
           style={{ height: '100%' }}
           selectedKeys={[page]}
           items={PAGES}

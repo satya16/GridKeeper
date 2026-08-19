@@ -208,3 +208,35 @@ passing `theme={themeMode}` to both makes the sider genuinely follow
 the toggle. Verified via Playwright in both themes, at both viewport
 sizes, plus a toggle-then-reload check confirming `localStorage`
 persistence actually works.
+
+**Sider collapses to an icon rail on desktop, not to nothing 2026-08-19**
+(same day, third follow-up): was using `collapsedWidth={0}` for both
+desktop and mobile, which fully hid the sider either way -- feedback
+was that desktop should collapse to antd's actual standard pattern
+instead (an ~80px icon-only rail with hover tooltips), while mobile
+should keep the full-hide-then-overlay behavior from earlier (a
+permanent icon rail eating screen width makes much less sense on a
+phone). `App.jsx` now tracks `isMobile` reactively (a `resize`
+listener, not just the click-time check `selectPage` already had) and
+sets `collapsedWidth={isMobile ? 0 : 80}` accordingly; `Menu` gets
+`inlineCollapsed={siderCollapsed && !isMobile}` to match. `PAGES` items
+now carry real icons (`ClusterOutlined`/`KeyOutlined`/`LineChartOutlined`)
+-- required for the rail to show anything meaningful, and antd's Menu
+automatically shows a hover tooltip with the item's label when
+`inlineCollapsed` is true, no extra wiring needed (confirmed live: a
+`.ant-menu-item` hover query at first appeared to show a full expanded
+panel instead of a small tooltip, which looked like a real bug -- a
+follow-up, more careful DOM query and clean screenshot showed a normal
+small tooltip; the first result was a stray Playwright/paint-timing
+artifact, not an actual bug, confirmed by not reproducing it). The
+`sider-brand` block also collapses "GridKeeper" to "GK" (desktop only,
+matching the same `siderCollapsed && !isMobile` condition) rather than
+clipping the full word illegibly at 80px -- one screenshot briefly
+appeared to show the clipped full word instead of "GK" mid-verification,
+which turned out to be a CSS-width-transition-vs-screenshot-timing
+artifact too (a direct DOM `innerText` query, immune to that, confirmed
+"GK" was correct throughout); worth remembering that a single
+screenshot taken during an active CSS transition can occasionally
+capture a stale paint frame, so a surprising screenshot result during
+verification is worth double-checking against the DOM before treating
+it as a real bug.
