@@ -12,3 +12,7 @@ grid.db
 # README's quickstart) to regenerate it.
 hub/app/static/dist/
 hub/frontend/node_modules/
+
+# PyPI build output -- `python3 -m build` in node/, not committed.
+node/dist/
+node/build/
