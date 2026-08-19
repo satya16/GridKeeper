@@ -58,6 +58,28 @@ Network status
     perm becomes current in 0 sec
 """
 
+# Real output, confirmed live 2026-08-19 on a laptop running on battery --
+# BOINC's own preference is to not crunch on battery power by default, and
+# reports it via this CPU-section-only "suspended: on batteries" line.
+SAMPLE_CC_STATUS_ON_BATTERY = """
+network connection status: don't need connection
+CPU status
+    suspended: on batteries
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+GPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+Network status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+"""
+
 
 def test_parse_blocks_projects():
     blocks = boinc._parse_blocks(SAMPLE_GUI_INFO)
@@ -87,6 +109,23 @@ def test_find_field():
     assert boinc._find_field(SAMPLE_CC_STATUS, "nonexistent field") is None
 
 
+def test_cpu_suspend_reason_none_when_not_suspended():
+    assert boinc._cpu_suspend_reason(SAMPLE_CC_STATUS) is None
+
+
+def test_cpu_suspend_reason_on_battery():
+    assert boinc._cpu_suspend_reason(SAMPLE_CC_STATUS_ON_BATTERY) == "on batteries"
+
+
+def test_cpu_suspend_reason_ignores_gpu_only_suspension():
+    # GPU can carry its own "suspended: <reason>" line -- must not be
+    # misattributed to the CPU as the reason work isn't running.
+    text = SAMPLE_CC_STATUS.replace(
+        "GPU status\n    not suspended", "GPU status\n    suspended: user request"
+    )
+    assert boinc._cpu_suspend_reason(text) is None
+
+
 def test_is_available_false_when_missing(monkeypatch):
     monkeypatch.setattr(boinc.shutil, "which", lambda name: None)
     assert boinc.is_available() is False
@@ -109,6 +148,7 @@ def test_get_status_end_to_end(monkeypatch):
     status = boinc.get_status()
 
     assert status["run_mode"] == "according to prefs"
+    assert status["cpu_suspend_reason"] is None
     assert len(status["projects"]) == 2
     assert status["projects"][0]["name"] == "World Community Grid"
     assert status["projects"][0]["url"] == "https://www.worldcommunitygrid.org/"
@@ -118,6 +158,20 @@ def test_get_status_end_to_end(monkeypatch):
     assert len(status["tasks"]) == 2
     assert status["tasks"][0]["fraction_done"] == 0.482913
     assert status["tasks"][1]["state"] == "SUSPENDED"
+
+
+def test_get_status_reports_cpu_suspend_reason_on_battery(monkeypatch):
+    def fake_run(*args):
+        if args[0] == "--get_simple_gui_info":
+            return SAMPLE_GUI_INFO
+        if args[0] == "--get_cc_status":
+            return SAMPLE_CC_STATUS_ON_BATTERY
+        raise AssertionError(f"unexpected boinccmd args: {args}")
+
+    monkeypatch.setattr(boinc, "_run", fake_run)
+    status = boinc.get_status()
+
+    assert status["cpu_suspend_reason"] == "on batteries"
 
 
 def test_suspend_project_calls_boinccmd_correctly(monkeypatch):

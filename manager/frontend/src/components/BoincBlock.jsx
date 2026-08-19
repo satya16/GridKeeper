@@ -14,6 +14,7 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
   const projects = boinc.projects || []
   const tasks = boinc.tasks || []
   const runMode = boinc.run_mode || 'unknown'
+  const suspendReason = boinc.cpu_suspend_reason
 
   const run = async (action, payload) => {
     try {
@@ -40,6 +41,11 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
       <Typography.Text type="secondary" style={{ textTransform: 'uppercase', fontSize: 12, letterSpacing: '0.04em' }}>
         BOINC — run mode: {runMode}
       </Typography.Text>
+      {suspendReason && (
+        <div>
+          <Typography.Text type="warning">CPU suspended: {suspendReason}</Typography.Text>
+        </div>
+      )}
 
       {projects.length ? (
         projects.map((p) => (

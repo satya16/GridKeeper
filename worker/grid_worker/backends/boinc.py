@@ -83,8 +83,24 @@ def _find_field(text: str, field_name: str) -> str | None:
     return match.group(1).strip() if match else None
 
 
+def _cpu_suspend_reason(cc_status: str) -> str | None:
+    """CPU section only -- e.g. "on batteries", "user request", "always".
+
+    Deliberately scoped to just the CPU section (not a plain _find_field
+    search over the whole text): GPU/Network status can also carry their
+    own "suspended: <reason>" line, and a naive first-match search would
+    misattribute a GPU-only suspension as the reason CPU work isn't
+    running. When CPU isn't suspended, its line reads "not suspended"
+    (no colon), which this correctly reports as None.
+    """
+    section = re.search(r"CPU status\s*\n(.*?)(?:\nGPU status|\Z)", cc_status, re.DOTALL)
+    if not section:
+        return None
+    return _find_field(section.group(1), "suspended")
+
+
 def get_status() -> dict:
-    """Returns {"run_mode": str, "projects": [...], "tasks": [...]}."""
+    """Returns {"run_mode": str, "cpu_suspend_reason": str | None, "projects": [...], "tasks": [...]}."""
     gui_info = _run("--get_simple_gui_info")
     blocks = _parse_blocks(gui_info)
 
@@ -122,8 +138,14 @@ def get_status() -> dict:
     # each of which also has their own "current mode:" line -- this
     # regex matches the first occurrence, i.e. CPU's).
     run_mode = _find_field(cc_status, "current mode") or "unknown"
+    cpu_suspend_reason = _cpu_suspend_reason(cc_status)
 
-    return {"run_mode": run_mode, "projects": projects, "tasks": tasks}
+    return {
+        "run_mode": run_mode,
+        "cpu_suspend_reason": cpu_suspend_reason,
+        "projects": projects,
+        "tasks": tasks,
+    }
 
 
 def suspend_project(project_url: str) -> dict:

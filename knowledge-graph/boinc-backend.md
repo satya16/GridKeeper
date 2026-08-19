@@ -233,3 +233,23 @@ response, not by looking at the rendered page. Low risk (it's a direct
 prop-to-text render of the same JSON), but unconfirmed. `detach_project`
 against this real project also untested — attach only, project left
 attached deliberately since a real account now exists for future testing.
+
+## Added 2026-08-19: `cpu_suspend_reason` field
+
+After attaching, the user asked why CPU usage wasn't going up — turned
+out BOINC's own default preference is to not crunch on battery power
+(`boinccmd --get_cc_status`'s CPU section shows `suspended: on
+batteries` in that case), which the dashboard had no way to surface;
+`run_mode` alone (`"according to prefs"`) doesn't explain it.
+`get_status()` now also returns `cpu_suspend_reason: str | None`, parsed
+by a new `_cpu_suspend_reason()` helper that's deliberately scoped to
+just the CPU section of `--get_cc_status` output (regex-bounded between
+`"CPU status"` and `"GPU status"`) rather than a naive whole-text
+`_find_field` search — GPU/Network can carry their own independent
+`suspended: <reason>` line, and a naive search would misattribute a
+GPU-only suspension as the reason CPU work isn't running. Verified live:
+correctly reported `"on batteries"` on this machine while genuinely
+running unplugged. `BoincBlock.jsx` shows it as a warning-styled line
+under the run-mode text when present. Same "still not independently
+verified in an actual browser" caveat as the rest of this component
+applies here too.
