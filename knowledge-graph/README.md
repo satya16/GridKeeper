@@ -19,9 +19,9 @@ id: scheduling
 type: component            # component | data-model | protocol | process
 status: implemented-untested   # see Status values below
 files:
-  - worker/grid_worker/schedule.py
-  - manager/app/api/schedule.py
-relates_to: [manager, worker, boinc-backend, fah-backend, wire-protocol]
+  - node/grid_node/schedule.py
+  - hub/app/api/schedule.py
+relates_to: [hub, node, boinc-backend, fah-backend, wire-protocol]
 ---
 ```
 
@@ -55,18 +55,18 @@ add an edge, add it on both ends.
 
 | id | type | status | what it is |
 |---|---|---|---|
-| [manager](manager.md) | component | verified | the FastAPI server app |
-| [worker](worker.md) | component | verified | the per-machine client daemon |
+| [hub](hub.md) | component | verified | the FastAPI server app |
+| [node](node.md) | component | verified | the per-machine client daemon |
 | [pairing](pairing.md) | component | verified | both enrollment flows (manual token, LAN+code) |
-| [wire-protocol](wire-protocol.md) | protocol | verified | the WebSocket frame types between worker and manager |
-| [data-model](data-model.md) | data-model | verified | the SQLite schema (`Worker`, `Command`, `PairingToken`) |
+| [wire-protocol](wire-protocol.md) | protocol | verified | the WebSocket frame types between node and hub |
+| [data-model](data-model.md) | data-model | verified | the SQLite schema (`Node`, `Command`, `PairingToken`) |
 | [scheduling](scheduling.md) | component | untested* | hours/idle policy enforcement |
 | [metrics](metrics.md) | component | verified | CPU/RAM/temperature collection + live charts |
 | [dashboard-ui](dashboard-ui.md) | component | verified | the React + Ant Design web dashboard |
 | [boinc-backend](boinc-backend.md) | component | verified‡ | BOINC control via `boinccmd` |
 | [fah-backend](fah-backend.md) | component | verified | Folding@home control via its WebSocket API |
-| [worker-local-ui](worker-local-ui.md) | component | untested* | optional per-machine read-only status page, off by default |
-| [credentials](credentials.md) | component | verified | saved BOINC account-key repository, single-worker apply |
+| [node-local-ui](node-local-ui.md) | component | untested* | optional per-machine read-only status page, off by default |
+| [credentials](credentials.md) | component | verified | saved BOINC account-key repository, single-node apply |
 | [testing](testing.md) | process | verified | the automated test suites + manual checklist |
 
 \* partially verified — see the entity for exactly what was and wasn't

@@ -3,19 +3,19 @@ id: metrics
 type: component
 status: implemented-verified
 files:
-  - worker/grid_worker/metrics.py
-  - manager/app/metrics_store.py
-  - manager/app/api/metrics.py
-  - manager/frontend/src/components/MetricsSection.jsx
-  - manager/frontend/src/components/LineChart.jsx
-relates_to: [worker, manager, dashboard-ui, wire-protocol]
+  - node/grid_node/metrics.py
+  - hub/app/metrics_store.py
+  - hub/app/api/metrics.py
+  - hub/frontend/src/components/MetricsSection.jsx
+  - hub/frontend/src/components/LineChart.jsx
+relates_to: [node, hub, dashboard-ui, wire-protocol]
 ---
 
 CPU%/RAM%/temperature collection and the "Live metrics" dashboard graphs.
-`worker/grid_worker/metrics.py` collects via `psutil`, riding along in
+`node/grid_node/metrics.py` collects via `psutil`, riding along in
 every status frame (see [wire-protocol](wire-protocol.md)) rather than a
-separate channel. `manager/app/metrics_store.py` keeps an in-memory
-rolling window per worker (~1 hour, `collections.deque`) — deliberately
+separate channel. `hub/app/metrics_store.py` keeps an in-memory
+rolling window per node (~1 hour, `collections.deque`) — deliberately
 *not* persisted to SQLite; this is "recent live state," not the
 long-term historical analytics `docs/REQUIREMENTS.md` §2 puts out of
 scope.
@@ -29,7 +29,7 @@ Linux-only (`psutil.sensors_temperatures()` isn't implemented on
 macOS/Windows) and degrades to `null` rather than erroring.
 
 **Verified** (2026-08-11, local smoke test): the full data pipeline —
-`psutil` collection on the worker, `metrics.py`'s temperature sensor
+`psutil` collection on the node, `metrics.py`'s temperature sensor
 lookup (found a real sensor on the test machine and returned a plausible
 value), the rolling-window store, and `GET /api/metrics` — confirmed
 working with real, sane-looking values (e.g. `cpu_percent: 8.5`,

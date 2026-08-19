@@ -3,8 +3,8 @@ id: fah-backend
 type: component
 status: implemented-verified
 files:
-  - worker/grid_worker/backends/fah.py
-relates_to: [worker, scheduling]
+  - node/grid_node/backends/fah.py
+relates_to: [node, scheduling]
 ---
 
 Controls a locally-running FAHClient by speaking its local control socket
@@ -17,7 +17,7 @@ commands over the same socket.
 
 Unlike [boinc-backend](boinc-backend.md), FAH has no native idle/hours
 scheduling — that's why [scheduling](scheduling.md) has to poll and
-pause/unpause from the worker side for FAH specifically, rather than
+pause/unpause from the node side for FAH specifically, rather than
 delegating to FAH itself.
 
 Framing/prompt-detection logic matches FAHClient's documented protocol
@@ -27,7 +27,7 @@ docstring and `CLAUDE.md`.
 Not touched by the 2026-08-11 smoke test at all (no FAHClient in the test
 environment, and unlike [boinc-backend](boinc-backend.md) no command was
 issued against it to at least confirm the failure path) — still the
-least-verified piece of the worker.
+least-verified piece of the node.
 
 **Protocol mismatch found 2026-08-18 (real-hardware install attempt):**
 installed the only FAHClient currently distributed by foldingathome.org —
@@ -50,8 +50,8 @@ version this client no longer speaks at all**.
 
 **Rewritten and verified live 2026-08-18.** `fah.py` now speaks
 JSON-over-WebSocket against `ws://127.0.0.1:7396/api/websocket`, using
-`websockets.sync.client` (already a project dependency via `worker.py`'s
-own manager connection — no new dependency added). One important catch
+`websockets.sync.client` (already a project dependency via `daemon.py`'s
+own hub connection — no new dependency added). One important catch
 found only by testing against the real daemon, not the source: **GitHub's
 `FoldingAtHome/fah-client-bastet` `master` branch is ahead of what
 foldingathome.org actually distributes.** `master` documents a richer
@@ -75,9 +75,9 @@ there's nothing narrower to target.
 
 Verified end-to-end against the real daemon on 2026-08-18: `is_available()`,
 `get_status()` (correct empty-slots shape with no work unit assigned),
-`pause_all()`/`unpause_all()` (round-tripped through `worker.py`'s actual
+`pause_all()`/`unpause_all()` (round-tripped through `daemon.py`'s actual
 `_execute_command` dispatch path, not just called directly — confirmed
-`config.paused` flips both ways). 7 tests in `worker/tests/test_fah.py`
+`config.paused` flips both ways). 7 tests in `node/tests/test_fah.py`
 rewritten to match and passing.
 
 **`set_config()` added + real work-unit fields verified, same day, second
@@ -90,7 +90,7 @@ connection) that `config` *is* honored on 8.1.18, unlike `state`. Added
 `fold_anon`/`cause` only — plus a `set_config` `ACTIONS` entry, and
 extended `get_status()` to report `{"slots": [...], "account": {"user",
 "team", "cause", "fold_anon"}}` (deliberately omitting `passkey`, which
-would otherwise sit in the manager's per-worker status table in
+would otherwise sit in the hub's per-node status table in
 plaintext on every poll).
 
 Setting `fold_anon: true` (cause `"any"`, no account) during this test
@@ -113,13 +113,13 @@ either — fetched live from `https://api.foldingathome.org/project/cause`,
 the same endpoint the official `fah-web-client-bastet` frontend calls
 (`src/CommonSettings.vue`'s cause `<select>`, backed by `src/api.js`'s
 `get_causes()`). Hardcoded into `dashboard.js` as `FAH_CAUSES` rather
-than fetched at runtime, to avoid giving the manager a new external
+than fetched at runtime, to avoid giving the hub a new external
 dependency for a list that changes rarely.
 
 Like BOINC's `account_key` (see [boinc-backend](boinc-backend.md)), FAH's
 `passkey` is a long-lived credential — `set_config`'s payload gets the
-same manager-side redaction treatment
-(`manager/app/api/workers.py::_SENSITIVE_PAYLOAD_FIELDS`).
+same hub-side redaction treatment
+(`hub/app/api/nodes.py::_SENSITIVE_PAYLOAD_FIELDS`).
 
 Dashboard: `renderFahBlock` in `dashboard.js` now shows current
 account/cause state and a collapsed "Account & cause…" form (cause

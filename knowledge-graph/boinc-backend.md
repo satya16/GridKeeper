@@ -3,8 +3,8 @@ id: boinc-backend
 type: component
 status: implemented-verified
 files:
-  - worker/grid_worker/backends/boinc.py
-relates_to: [worker, scheduling, credentials]
+  - node/grid_node/backends/boinc.py
+relates_to: [node, scheduling, credentials]
 ---
 
 Controls a locally-installed BOINC client by shelling out to `boinccmd`
@@ -19,12 +19,12 @@ names confirmed real against `boinccmd --help` output, 2026-08-18).
 
 `attach_project(url, account_key)` takes the project's account
 authenticator (from that project's "your account" web page) — a
-long-lived credential, unlike the manager's one-time pairing tokens. The
-manager (`manager/app/api/workers.py::_redact_payload`) masks
+long-lived credential, unlike the hub's one-time pairing tokens. The
+hub (`hub/app/api/nodes.py::_redact_payload`) masks
 `account_key` before writing a command to the `commands` table or
 returning it from the command-lookup API, since that table is meant to
 be a durable audit log (`docs/REQUIREMENTS.md` section 9) — the real key
-still reaches the worker over the WebSocket at dispatch time, only what
+still reaches the node over the WebSocket at dispatch time, only what
 gets persisted/echoed back is redacted. If another sensitive field is
 ever added to any backend's payload, add it to
 `_SENSITIVE_PAYLOAD_FIELDS` there rather than assuming a new field is
@@ -35,7 +35,7 @@ concern from the status/command path: it writes a temp
 `global_prefs_override.xml` and applies it via `boinccmd
 --set_global_prefs_override` + `--read_global_prefs_override`, letting
 BOINC's own idle/hours engine take over rather than polling from the
-worker side.
+node side.
 
 If `boinccmd`'s text format turns out to vary by version, swap the
 parsing internals without touching callers — they only see the dict
@@ -43,7 +43,7 @@ shapes `get_status()` returns.
 
 **Partially verified** (2026-08-11, local smoke test — no BOINC installed
 in the test environment): confirmed `is_available()` correctly reports
-`False` and the worker skips this backend entirely rather than crashing;
+`False` and the node skips this backend entirely rather than crashing;
 issuing a command against it produced a clean `BoincError("boinccmd not
 found on PATH")` that propagated correctly as a `command_result` error
 frame back through the REST API, so the *failure* path works. The actual
@@ -71,7 +71,7 @@ daemon build, not one clean bug with one fix.
 Tried the snap build (`aenbleidd`'s `boinc`, version 8.2.13 — newer than
 the broken apt package) as an alternative: it installs and runs, but its
 snap packaging **doesn't ship `boinccmd` at all** (only `boinc`,
-`boinc.client`, `boinc.manager` — the last needs a GUI). So it can't
+`boinc.client`, `boinc.hub` — the last needs a GUI). So it can't
 substitute for what this backend actually shells out to, even if its
 daemon turns out to be healthier.
 
@@ -125,8 +125,8 @@ enough if the bug is actually in the client's retry logic.
 
 **`attach_project`/`detach_project` added 2026-08-18** (dashboard form +
 per-project "Detach" button in [dashboard-ui](dashboard-ui.md), tests in
-`worker/tests/test_boinc.py` and the redaction test in
-`manager/tests/test_workers.py`). Same status as the rest of this
+`node/tests/test_boinc.py` and the redaction test in
+`hub/tests/test_nodes.py`). Same status as the rest of this
 backend's command path: the exact `boinccmd` flag names/argument order
 were checked against real `boinccmd --help` output, but the daemon-hang
 bug above means neither command has been exercised against a real
@@ -159,7 +159,7 @@ tooling) — the `EINTR`-then-never-retry bug traced via `strace` in the
 8.2.9 build genuinely does not reproduce in 8.2.15. `suspend_all()` /
 `resume_all()` confirmed to actually change daemon state (`--set_run_mode
 never`/`auto`, verified via `--get_cc_status` before/after), round-tripped
-through `worker.py`'s real `_execute_command` dispatch path, not just
+through `daemon.py`'s real `_execute_command` dispatch path, not just
 called directly.
 
 **Found and fixed a real parsing bug along the way**, same pattern as
@@ -174,7 +174,7 @@ made this whole code path unreachable until now. Fixed; `run_mode` now
 reports BOINC's own real phrasing (e.g. `"according to prefs"` for the
 default/auto state, not literally the word `"auto"` — that's the
 *command* value you send, not the *status* phrasing BOINC reports back).
-Test fixtures in `worker/tests/test_boinc.py` (`SAMPLE_CC_STATUS`)
+Test fixtures in `node/tests/test_boinc.py` (`SAMPLE_CC_STATUS`)
 replaced with the real captured output rather than the invented format
 that was there before.
 
@@ -185,22 +185,22 @@ behavior is still unverified.**
 
 Signed up for a real Einstein@Home account and attached it through the
 dashboard's "Attach a project…" form (`POST
-/api/workers/{id}/commands`, `attach_project`), end to end — real
+/api/nodes/{id}/commands`, `attach_project`), end to end — real
 account key, real WebSocket dispatch, real `boinccmd --project_attach`.
-`boinccmd --get_project_status` on the worker machine confirmed the
+`boinccmd --get_project_status` on the node machine confirmed the
 attach succeeded (real `master URL`, scheduler RPC completed). Also
-confirmed live: the manager's redaction — `POST .../commands`'s response
+confirmed live: the hub's redaction — `POST .../commands`'s response
 echoed `account_key` as `"***redacted***"` even though the real key
-reached the worker.
+reached the node.
 
 But the *dashboard's* view of the attached project was wrong — found by
 actually looking at the parsed output, not just checking "did attach
 return ok":
 
-1. **`get_status()` used the wrong field name.** It read `p.get("manager
+1. **`get_status()` used the wrong field name.** It read `p.get("hub
    URL", ...)`, but real `boinccmd --get_simple_gui_info` output calls
    the field `"master URL"` — so `projects[].url` was always `""`. The
-   test fixture (`SAMPLE_GUI_INFO` in `worker/tests/test_boinc.py`)
+   test fixture (`SAMPLE_GUI_INFO` in `node/tests/test_boinc.py`)
    already had the *correct* key, but no test ever asserted
    `status["projects"][0]["url"]`, only `name`/`suspended` — that
    coverage gap is exactly how this shipped unnoticed.
@@ -242,7 +242,7 @@ showed 3 separate project blocks, same master URL. Root cause: this
 session called `attach_project` to the same project 4 times over several
 minutes (manual attach, then credential single-apply, then
 apply-group, then apply-all while building/testing
-[[grid_manager_credentials_repository]]) — BOINC's own "already
+[[grid_hub_credentials_repository]]) — BOINC's own "already
 attached" rejection only fired on the *last* call; the first 3 each
 silently created a separate entry. Cleaned up live with three
 `boinccmd --project <master-url> detach` calls (each detach call only
@@ -251,7 +251,7 @@ three times to reach zero).
 
 **Fix:** `attach_project()` now checks `get_status()`'s current project
 list itself before calling `boinccmd --project_attach`, rather than
-trusting BOINC's own dedup (`worker/grid_worker/backends/boinc.py`).
+trusting BOINC's own dedup (`node/grid_node/backends/boinc.py`).
 Verified live: attach once, then immediately attach again with the same
 credential — second call correctly returned `already_attached: true`
 without calling `boinccmd` at all, and the real project count stayed at
@@ -274,7 +274,7 @@ happened — which is exactly the gap that let today's original 3
 duplicates through (those calls were minutes apart, plenty of time for
 resolution to complete between them). Closing this fully would mean
 replicating BOINC's own master-file-fetch URL resolution (or tracking
-attach/detach history per (worker, project_url) in the manager's own
+attach/detach history per (node, project_url) in the hub's own
 `commands` table) — not done, since the guard as shipped already
 closes the realistic trigger (rapid repeat / accidental double-submit)
 and the remaining gap needs a deliberate, spaced-out repeat to hit.

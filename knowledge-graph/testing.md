@@ -3,10 +3,10 @@ id: testing
 type: process
 status: implemented-verified
 files:
-  - manager/tests/
-  - worker/tests/
+  - hub/tests/
+  - node/tests/
   - docs/TESTING.md
-relates_to: [manager, worker]
+relates_to: [hub, node]
 ---
 
 Two automated `pytest` suites (54 tests total, all passing as of
@@ -14,16 +14,16 @@ Two automated `pytest` suites (54 tests total, all passing as of
 detail and run instructions in `docs/TESTING.md`, this entry is just the
 map pointer.
 
-`manager/tests/` (23 tests) uses FastAPI's `TestClient` against a real
+`hub/tests/` (23 tests) uses FastAPI's `TestClient` against a real
 temp-file SQLite DB per test run, with the mDNS discovery registry
 stubbed to a no-op (no real network in a unit test) and the WebSocket
-`ConnectionManager` monkeypatched per-test to simulate an online worker
+`ConnectionRegistry` monkeypatched per-test to simulate an online node
 that responds instantly — this exercises [pairing](pairing.md)'s manual
-flow, [data-model](data-model.md) persistence, and the manager side of
+flow, [data-model](data-model.md) persistence, and the hub side of
 [wire-protocol](wire-protocol.md)'s command dispatch, all without a real
-worker process.
+node process.
 
-`worker/tests/` (31 tests) is pure logic with all I/O
+`node/tests/` (31 tests) is pure logic with all I/O
 (`subprocess`/sockets/`datetime.now()`) monkeypatched: parsing for
 [boinc-backend](boinc-backend.md) and [fah-backend](fah-backend.md), and
 [scheduling](scheduling.md)'s hour-wrap-past-midnight arithmetic and
@@ -33,7 +33,7 @@ having gotten it right by inspection.
 
 Found one real regression while wiring these up (unrelated to test
 content): FastAPI's `@app.on_event` is deprecated in the installed
-version; `manager/app/main.py` now uses a `lifespan` context manager
+version; `hub/app/main.py` now uses a `lifespan` context hub
 instead.
 
 **Not covered, by design** — see `docs/TESTING.md`'s manual checklist:
