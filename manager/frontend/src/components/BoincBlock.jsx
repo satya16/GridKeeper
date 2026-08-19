@@ -8,6 +8,12 @@ function pct(fraction) {
 
 export function BoincBlock({ workerId, boinc, onChanged }) {
   const [attachForm] = Form.useForm()
+  // Command dispatch already blocks until the worker's real result comes
+  // back (or a 15s timeout) -- these track "is that wait still in flight"
+  // so buttons can disable/spin rather than let a fast double-click (e.g.
+  // Start while Stop hasn't resolved yet) race against stale local state.
+  const [pendingProjects, setPendingProjects] = useState(new Set())
+  const [pendingAll, setPendingAll] = useState(false)
 
   if (!boinc) return null
 
@@ -26,9 +32,31 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
     }
   }
 
+  const runForProject = async (action, projectUrl) => {
+    setPendingProjects((prev) => new Set(prev).add(projectUrl))
+    try {
+      await run(action, { project_url: projectUrl })
+    } finally {
+      setPendingProjects((prev) => {
+        const next = new Set(prev)
+        next.delete(projectUrl)
+        return next
+      })
+    }
+  }
+
+  const runForAll = async (action) => {
+    setPendingAll(true)
+    try {
+      await run(action, {})
+    } finally {
+      setPendingAll(false)
+    }
+  }
+
   const detach = (projectUrl) => {
     if (!window.confirm(`Detach from ${projectUrl}? Any work in progress for this project will be abandoned.`)) return
-    run('detach_project', { project_url: projectUrl })
+    runForProject('detach_project', projectUrl)
   }
 
   const handleAttach = async (values) => {
@@ -48,25 +76,30 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
       )}
 
       {projects.length ? (
-        projects.map((p) => (
-          <div className="task-row" key={p.url}>
-            <span>
-              {p.name || p.url}
-              {p.suspended ? ' (suspended)' : ''}
-            </span>
-            <Space size="small">
-              <Button
-                size="small"
-                onClick={() => run(p.suspended ? 'resume_project' : 'suspend_project', { project_url: p.url })}
-              >
-                {p.suspended ? 'Start' : 'Stop'}
-              </Button>
-              <Button size="small" danger onClick={() => detach(p.url)}>
-                Detach
-              </Button>
-            </Space>
-          </div>
-        ))
+        projects.map((p) => {
+          const isPending = pendingProjects.has(p.url)
+          return (
+            <div className="task-row" key={p.url}>
+              <span>
+                {p.name || p.url}
+                {p.suspended ? ' (suspended)' : ''}
+              </span>
+              <Space size="small">
+                <Button
+                  size="small"
+                  loading={isPending}
+                  disabled={isPending}
+                  onClick={() => runForProject(p.suspended ? 'resume_project' : 'suspend_project', p.url)}
+                >
+                  {p.suspended ? 'Start' : 'Stop'}
+                </Button>
+                <Button size="small" danger loading={isPending} disabled={isPending} onClick={() => detach(p.url)}>
+                  Detach
+                </Button>
+              </Space>
+            </div>
+          )
+        })
       ) : (
         <p className="task-row muted">no attached projects reported</p>
       )}
@@ -84,8 +117,10 @@ export function BoincBlock({ workerId, boinc, onChanged }) {
       ))}
 
       <Space style={{ marginTop: 8 }}>
-        <Button onClick={() => run('resume_all', {})}>Resume all</Button>
-        <Button danger onClick={() => run('suspend_all', {})}>
+        <Button loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('resume_all')}>
+          Resume all
+        </Button>
+        <Button danger loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('suspend_all')}>
           Suspend all
         </Button>
       </Space>
