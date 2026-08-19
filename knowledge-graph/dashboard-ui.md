@@ -5,7 +5,7 @@ status: implemented-verified
 files:
   - manager/frontend/src
   - manager/app/main.py
-relates_to: [manager, pairing, scheduling, metrics, boinc-backend, fah-backend]
+relates_to: [manager, pairing, scheduling, metrics, boinc-backend, fah-backend, credentials]
 ---
 
 The admin-facing web UI — **React + Ant Design, built with Vite**

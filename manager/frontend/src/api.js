@@ -45,4 +45,17 @@ export const api = {
   createPairingToken: (label, group) =>
     request('/api/pairing-tokens', { method: 'POST', body: JSON.stringify({ label, group }) }),
   getMetrics: () => request('/api/metrics'),
+  listCredentials: () => request('/api/credentials'),
+  createCredential: (name, projectUrl, accountKey) =>
+    request('/api/credentials', {
+      method: 'POST',
+      body: JSON.stringify({ name, project_url: projectUrl, account_key: accountKey }),
+    }),
+  deleteCredential: (credentialId) =>
+    request(`/api/credentials/${encodeURIComponent(credentialId)}`, { method: 'DELETE' }),
+  applyCredential: (credentialId, workerId) =>
+    request(`/api/credentials/${encodeURIComponent(credentialId)}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ worker_id: workerId }),
+    }),
 }

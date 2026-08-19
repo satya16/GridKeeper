@@ -13,6 +13,7 @@ from .api import discovery as discovery_api
 from .api import pairing as pairing_api
 from .api import metrics as metrics_api
 from .api import schedule as schedule_api
+from .api import credentials as credentials_api
 from .db import SessionLocal, init_db, utcnow
 from .discovery import registry as discovery_registry
 from .metrics_store import store as metrics_store
@@ -38,6 +39,7 @@ app.include_router(pairing_api.router)
 app.include_router(discovery_api.router)
 app.include_router(schedule_api.router)
 app.include_router(metrics_api.router)
+app.include_router(credentials_api.router)
 
 app.mount("/static", StaticFiles(directory=os.path.join(_APP_DIR, "static")), name="static")
 

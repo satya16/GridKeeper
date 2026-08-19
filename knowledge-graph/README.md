@@ -66,6 +66,7 @@ add an edge, add it on both ends.
 | [boinc-backend](boinc-backend.md) | component | verified‡ | BOINC control via `boinccmd` |
 | [fah-backend](fah-backend.md) | component | verified | Folding@home control via its WebSocket API |
 | [worker-local-ui](worker-local-ui.md) | component | untested* | optional per-machine read-only status page, off by default |
+| [credentials](credentials.md) | component | verified | saved BOINC account-key repository, single-worker apply |
 | [testing](testing.md) | process | verified | the automated test suites + manual checklist |
 
 \* partially verified — see the entity for exactly what was and wasn't

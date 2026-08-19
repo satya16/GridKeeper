@@ -7,7 +7,7 @@ files:
   - manager/app/auth.py
   - manager/app/ws_manager.py
   - manager/app/deps.py
-relates_to: [worker, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing]
+relates_to: [worker, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing, credentials]
 ---
 
 The FastAPI app (GridKeeper's manager) — the "one dashboard" side of the

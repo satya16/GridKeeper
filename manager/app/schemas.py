@@ -81,6 +81,24 @@ class DiscoveryPairResponse(BaseModel):
     name: str
 
 
+class CredentialCreate(BaseModel):
+    name: str
+    project_url: str
+    account_key: str
+
+
+class CredentialOut(BaseModel):
+    id: str
+    name: str
+    project_url: str
+    created_at: str
+    last_used_at: str | None
+
+
+class CredentialApplyRequest(BaseModel):
+    worker_id: str
+
+
 class CommandOut(BaseModel):
     id: str
     worker_id: str

@@ -4,7 +4,7 @@ type: component
 status: implemented-verified
 files:
   - worker/grid_worker/backends/boinc.py
-relates_to: [worker, scheduling]
+relates_to: [worker, scheduling, credentials]
 ---
 
 Controls a locally-installed BOINC client by shelling out to `boinccmd`

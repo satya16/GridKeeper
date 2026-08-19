@@ -1,12 +1,15 @@
 import os
 import tempfile
 
+from cryptography.fernet import Fernet
+
 # Must happen before any `app.*` import, since app/db.py reads these at
 # import time to build its SQLAlchemy engine.
 _db_fd, _db_path = tempfile.mkstemp(suffix=".db")
 os.close(_db_fd)
 os.environ["GRIDKEEPER_DB"] = _db_path
 os.environ["GRIDKEEPER_ADMIN_PASSWORD"] = "test-admin-password"
+os.environ["GRIDKEEPER_SECRET_KEY"] = Fernet.generate_key().decode()
 
 import pytest
 from fastapi.testclient import TestClient

@@ -28,6 +28,20 @@ export GRIDKEEPER_ADMIN_PASSWORD=changeme   # set your own
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+To save BOINC project account keys and re-apply them to any machine from
+the dashboard instead of pasting a key into each machine's attach form,
+also set `GRIDKEEPER_SECRET_KEY` (used to encrypt saved keys at rest --
+without it, everything else works, but the dashboard's "Saved BOINC
+account keys" panel will fail to save a new key):
+
+```bash
+export GRIDKEEPER_SECRET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+```
+
+Keep this value somewhere safe -- losing it makes any keys already saved
+unrecoverable (by design: the manager only ever stores them encrypted,
+never in plaintext).
+
 The frontend build step is only needed once (or after pulling frontend
 changes) -- `app/static/dist/` isn't committed, same as any other build
 output; see [`manager/frontend/README`](manager/frontend/README.md) for

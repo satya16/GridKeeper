@@ -3,6 +3,7 @@ import { usePolling } from './usePolling.js'
 import { Header } from './components/Header.jsx'
 import { DiscoverySection } from './components/DiscoverySection.jsx'
 import { FleetScheduleSection } from './components/FleetScheduleSection.jsx'
+import { CredentialsSection } from './components/CredentialsSection.jsx'
 import { WorkerListSection } from './components/WorkerListSection.jsx'
 import { MetricsSection } from './components/MetricsSection.jsx'
 import './App.css'
@@ -24,6 +25,7 @@ export default function App() {
       <Header />
       <DiscoverySection onPaired={onChanged} />
       <FleetScheduleSection groups={groups || []} onApplied={onChanged} />
+      <CredentialsSection workers={workers || []} onWorkerChanged={refreshWorkers} />
       <WorkerListSection workers={workers || []} groups={groups || []} onChanged={onChanged} />
       <MetricsSection />
     </div>

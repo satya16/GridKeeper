@@ -45,6 +45,24 @@ class PairingToken(Base):
     used_by_worker_id: Mapped[str | None] = mapped_column(default=None)
 
 
+class CredentialKey(Base):
+    """A saved BOINC project account key, so an admin enrolling many
+    machines with the same institutional account doesn't have to paste the
+    raw key into each worker's attach form separately. encrypted_account_key
+    is Fernet-encrypted at rest (see crypto.py) -- the plaintext key only
+    ever exists in memory, decrypted just before dispatching an
+    attach_project command."""
+
+    __tablename__ = "credential_keys"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True)
+    project_url: Mapped[str]
+    encrypted_account_key: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(default=None)
+
+
 class Command(Base):
     __tablename__ = "commands"
 

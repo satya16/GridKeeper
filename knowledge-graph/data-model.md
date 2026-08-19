@@ -4,7 +4,7 @@ type: data-model
 status: implemented-verified
 files:
   - manager/app/db.py
-relates_to: [manager, pairing, scheduling, wire-protocol]
+relates_to: [manager, pairing, scheduling, wire-protocol, credentials]
 ---
 
 SQLite via SQLAlchemy (`manager/app/db.py`), three tables:

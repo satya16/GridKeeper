@@ -99,26 +99,21 @@ def set_worker_group(
     return body
 
 
-@router.post("/api/workers/{worker_id}/commands", response_model=CommandOut)
-async def issue_command(
-    worker_id: str,
-    body: CommandRequest,
-    db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_admin),
-) -> CommandOut:
-    worker = db.get(Worker, worker_id)
-    if worker is None:
-        raise HTTPException(status_code=404, detail="no such worker")
-    if not manager.is_online(worker_id):
+async def dispatch_command(db: Session, worker: Worker, backend: str, action: str, payload: dict) -> CommandOut:
+    """Shared by the direct issue_command route below and
+    credentials.py's apply endpoint, which dispatches the same
+    attach_project command but with a saved (decrypted) account key
+    instead of one typed inline in the dashboard's attach form."""
+    if not manager.is_online(worker.id):
         raise HTTPException(status_code=409, detail=f"worker '{worker.name}' is not connected right now")
 
     command_id = str(uuid.uuid4())
     cmd = Command(
         id=command_id,
-        worker_id=worker_id,
-        backend=body.backend,
-        action=body.action,
-        payload_json=json.dumps(_redact_payload(body.backend, body.action, body.payload)),
+        worker_id=worker.id,
+        backend=backend,
+        action=action,
+        payload_json=json.dumps(_redact_payload(backend, action, payload)),
         status="sent",
     )
     db.add(cmd)
@@ -126,13 +121,13 @@ async def issue_command(
 
     future = manager.register_pending(command_id)
     sent = await manager.send_frame(
-        worker_id,
+        worker.id,
         {
             "type": "command",
             "command_id": command_id,
-            "backend": body.backend,
-            "action": body.action,
-            "payload": body.payload,
+            "backend": backend,
+            "action": action,
+            "payload": payload,
         },
     )
     if not sent:
@@ -154,6 +149,19 @@ async def issue_command(
     cmd.completed_at = utcnow()
     db.commit()
     return _command_out(cmd)
+
+
+@router.post("/api/workers/{worker_id}/commands", response_model=CommandOut)
+async def issue_command(
+    worker_id: str,
+    body: CommandRequest,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(auth.require_admin),
+) -> CommandOut:
+    worker = db.get(Worker, worker_id)
+    if worker is None:
+        raise HTTPException(status_code=404, detail="no such worker")
+    return await dispatch_command(db, worker, body.backend, body.action, body.payload)
 
 
 @router.get("/api/workers/{worker_id}/commands/{command_id}", response_model=CommandOut)
