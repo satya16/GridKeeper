@@ -8,7 +8,7 @@ files:
   - hub/app/discovery.py
   - hub/app/enrollment.py
   - node/grid_node/pairing.py
-relates_to: [hub, node, data-model, dashboard-ui]
+relates_to: [hub, node, data-model, dashboard-ui, users-and-roles]
 ---
 
 Two independent enrollment paths, both ending at

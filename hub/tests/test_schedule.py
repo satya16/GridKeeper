@@ -83,3 +83,37 @@ def test_schedule_defaults_when_fields_omitted(auth_client):
     assert body["enabled"] is False
     assert body["active_start_hour"] == 22
     assert body["active_end_hour"] == 6
+
+
+def test_group_manager_can_set_schedule_within_scope(auth_client, scoped_client):
+    node = _enroll(auth_client, "sched-scope-node")
+    auth_client.put(f"/api/nodes/{node['node_id']}/group", json={"group": "Lab 1"})
+
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.put(f"/api/nodes/{node['node_id']}/schedule", json=DEFAULT_POLICY)
+    assert resp.status_code == 200
+
+
+def test_group_manager_cannot_set_schedule_outside_scope(auth_client, scoped_client):
+    node = _enroll(auth_client, "sched-out-of-scope")
+    auth_client.put(f"/api/nodes/{node['node_id']}/group", json={"group": "Lab 2"})
+
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.put(f"/api/nodes/{node['node_id']}/schedule", json=DEFAULT_POLICY)
+    assert resp.status_code == 403
+
+
+def test_group_manager_can_apply_schedule_to_own_group_not_others(auth_client, scoped_client):
+    lab1 = _enroll(auth_client, "sched-lab1")
+    lab2 = _enroll(auth_client, "sched-lab2")
+    auth_client.put(f"/api/nodes/{lab1['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{lab2['node_id']}/group", json={"group": "Lab 2"})
+
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    assert gm.post("/api/schedule/apply-group/Lab 1", json=DEFAULT_POLICY).status_code == 200
+    assert gm.post("/api/schedule/apply-group/Lab 2", json=DEFAULT_POLICY).status_code == 403
+
+
+def test_non_admin_cannot_apply_schedule_to_all(auth_client, scoped_client):
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    assert gm.post("/api/schedule/apply-all", json=DEFAULT_POLICY).status_code == 403

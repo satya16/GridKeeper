@@ -6,9 +6,9 @@ See [`_docs/REQUIREMENTS.md`](_docs/REQUIREMENTS.md) for the full design,
 
 ## Testing
 
-There's now a real automated test suite — `hub/tests/` (52 tests:
+There's now a real automated test suite — `hub/tests/` (93 tests:
 FastAPI `TestClient` + temp SQLite, WebSocket layer mocked) and
-`node/tests/` (53 tests: pure logic, all I/O mocked) — 105 total. Run
+`node/tests/` (53 tests: pure logic, all I/O mocked) — 146 total. Run
 both before trusting a change:
 
 ```bash

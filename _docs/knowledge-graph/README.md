@@ -59,7 +59,7 @@ add an edge, add it on both ends.
 | [node](node.md) | component | verified | the per-machine client daemon |
 | [pairing](pairing.md) | component | verified | both enrollment flows (manual token, LAN+code) |
 | [wire-protocol](wire-protocol.md) | protocol | verified | the WebSocket frame types between node and hub |
-| [data-model](data-model.md) | data-model | verified | the SQLite schema (`Node`, `Command`, `PairingToken`) |
+| [data-model](data-model.md) | data-model | verified | the SQLite schema (`Node`, `Command`, `PairingToken`, `CredentialKey`, `User`, `AuditLogEntry`) |
 | [scheduling](scheduling.md) | component | untested* | hours/idle policy enforcement |
 | [metrics](metrics.md) | component | verified | CPU/RAM/temperature collection + live charts |
 | [dashboard-ui](dashboard-ui.md) | component | verified | the React + Ant Design web dashboard |
@@ -67,6 +67,7 @@ add an edge, add it on both ends.
 | [fah-backend](fah-backend.md) | component | verified | Folding@home control via its WebSocket API |
 | [node-local-ui](node-local-ui.md) | component | untested* | optional per-machine read-only status page, off by default |
 | [credentials](credentials.md) | component | verified | saved BOINC account-key repository, single-node apply |
+| [users-and-roles](users-and-roles.md) | component | verified | multi-user accounts, four-tier RBAC, audit log |
 | [testing](testing.md) | process | verified | the automated test suites + manual checklist |
 
 \* partially verified — see the entity for exactly what was and wasn't

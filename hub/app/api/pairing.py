@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import auth
-from ..db import Node, PairingToken, utcnow
+from ..audit import record_audit
+from ..db import Node, PairingToken, User, utcnow
 from ..deps import get_db
 from ..enrollment import create_node
 from ..schemas import EnrollRequest, EnrollResponse, PairingTokenCreate, PairingTokenOut
@@ -14,15 +15,20 @@ router = APIRouter(tags=["pairing"])
 def create_pairing_token(
     body: PairingTokenCreate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> PairingTokenOut:
     """A token's `group`, if set, carries over to whichever node redeems
     it (see enroll() below) -- so an admin onboarding a whole lab can mint
     one token per room and every machine paired with it lands in that
-    group automatically, no per-machine follow-up edit needed."""
+    group automatically, no per-machine follow-up edit needed. Minting is
+    admin/group_manager only (nothing new for a machine_manager or viewer
+    to enroll into); a group_manager's token is forced into their own
+    scope so they can't hand out a token for a group they can't manage."""
+    auth.require_group_access(user, body.group)
     token = auth.new_pairing_token()
     db.add(PairingToken(token=token, label=body.label, group=body.group))
     db.commit()
+    record_audit(db, user, "create_pairing_token", target=body.group or "(no group)", detail={"label": body.label})
     return PairingTokenOut(token=token, label=body.label, group=body.group)
 
 

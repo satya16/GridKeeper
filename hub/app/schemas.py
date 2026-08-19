@@ -4,11 +4,48 @@ from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
+    username: str
     password: str
 
 
 class LoginResult(BaseModel):
     ok: bool
+    role: str | None = None
+
+
+class UserOut(BaseModel):
+    id: str
+    username: str
+    role: str
+    scope: str
+    created_at: str
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: Literal["admin", "group_manager", "machine_manager", "viewer"]
+    scope: str = ""
+
+
+class UserUpdate(BaseModel):
+    role: Literal["admin", "group_manager", "machine_manager", "viewer"] | None = None
+    scope: str | None = None
+    password: str | None = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class AuditLogEntryOut(BaseModel):
+    id: str
+    username: str
+    action: str
+    target: str
+    detail: dict[str, Any] | None
+    created_at: str
 
 
 class PairingTokenCreate(BaseModel):
@@ -82,6 +119,7 @@ class DiscoveredNodeOut(BaseModel):
 class DiscoveryPairRequest(BaseModel):
     code: str
     name: str = ""
+    group: str = ""
 
 
 class DiscoveryPairResponse(BaseModel):

@@ -15,6 +15,7 @@ from .api import metrics as metrics_api
 from .api import schedule as schedule_api
 from .api import credentials as credentials_api
 from .api import auth as auth_api
+from .api import users as users_api
 from .db import SessionLocal, init_db, utcnow
 from .discovery import registry as discovery_registry
 from .metrics_store import store as metrics_store
@@ -29,6 +30,11 @@ _APP_DIR = os.path.dirname(__file__)
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     init_db()
+    db = SessionLocal()
+    try:
+        auth.bootstrap_admin_user(db)
+    finally:
+        db.close()
     await discovery_registry.start()
     yield
     await discovery_registry.stop()
@@ -42,6 +48,7 @@ app.include_router(schedule_api.router)
 app.include_router(metrics_api.router)
 app.include_router(credentials_api.router)
 app.include_router(auth_api.router)
+app.include_router(users_api.router)
 
 app.mount("/static", StaticFiles(directory=os.path.join(_APP_DIR, "static")), name="static")
 

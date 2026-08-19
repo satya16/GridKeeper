@@ -6,14 +6,14 @@ export function LoginForm({ onLoggedIn }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async ({ password }) => {
+  const handleSubmit = async ({ username, password }) => {
     setError('')
     setLoading(true)
     try {
-      await api.login(password)
-      onLoggedIn()
+      const { role } = await api.login(username, password)
+      onLoggedIn(role)
     } catch (err) {
-      setError(err.status === 401 ? 'Wrong password.' : `Login failed: ${err.message}`)
+      setError(err.status === 401 ? 'Wrong username or password.' : `Login failed: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -26,8 +26,11 @@ export function LoginForm({ onLoggedIn }) {
           GridKeeper
         </Typography.Title>
         <Form layout="vertical" onFinish={handleSubmit}>
+          <Form.Item name="username" label="Username" rules={[{ required: true }]}>
+            <Input autoFocus placeholder="Username" />
+          </Form.Item>
           <Form.Item name="password" label="Password" rules={[{ required: true }]}>
-            <Input.Password autoFocus placeholder="Admin password" />
+            <Input.Password placeholder="Password" />
           </Form.Item>
           {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
           <Form.Item style={{ marginBottom: 0 }}>

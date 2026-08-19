@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .. import auth
-from ..db import Node
+from ..audit import record_audit
+from ..db import Node, User
 from ..deps import get_db
 from ..discovery import registry
 from ..enrollment import create_node
@@ -25,8 +26,17 @@ def _public_hub_url(request: Request) -> str:
     return override.rstrip("/") if override else str(request.base_url).rstrip("/")
 
 
+def _require_discovery_access(user: User) -> None:
+    """Discovery/pairing is admin or group_manager only -- a
+    machine_manager already has their one machine, nothing new to find,
+    and a viewer can't write at all."""
+    if user.role not in ("admin", "group_manager"):
+        raise HTTPException(status_code=403, detail="admin or group manager only")
+
+
 @router.get("/api/discovery", response_model=list[DiscoveredNodeOut])
-def list_discovered(_admin: str = Depends(auth.require_session)) -> list[DiscoveredNodeOut]:
+def list_discovered(user: User = Depends(auth.require_session)) -> list[DiscoveredNodeOut]:
+    _require_discovery_access(user)
     return [DiscoveredNodeOut(**w) for w in registry.list_nodes()]
 
 
@@ -36,8 +46,15 @@ async def pair_discovered(
     body: DiscoveryPairRequest,
     request: Request,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> DiscoveryPairResponse:
+    _require_discovery_access(user)
+    if user.role == "group_manager":
+        # Forced into their own scope, same reasoning as pairing tokens:
+        # a group_manager shouldn't be able to enroll a node into a group
+        # they don't manage, or leave it group-less (unmanageable by them
+        # afterward).
+        auth.require_group_access(user, body.group)
     node = registry.get(discovery_id)
     if node is None:
         raise HTTPException(status_code=404, detail="node is no longer visible on the network -- try again")
@@ -64,6 +81,7 @@ async def pair_discovered(
         name=name,
         os_name=verify_data.get("os_name", "unknown"),
         backends=verify_data.get("backends", []),
+        group=body.group,
     )
 
     async with httpx.AsyncClient(timeout=PAIR_HTTP_TIMEOUT_SECONDS) as client:
@@ -86,4 +104,5 @@ async def pair_discovered(
         raise HTTPException(status_code=500, detail="node accepted the code but rejected the credential handoff")
 
     db.commit()
+    record_audit(db, user, "pair_discovered_node", target=name, detail={"group": body.group})
     return DiscoveryPairResponse(node_id=node_id, name=name)

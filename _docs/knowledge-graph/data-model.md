@@ -4,10 +4,10 @@ type: data-model
 status: implemented-verified
 files:
   - hub/app/db.py
-relates_to: [hub, pairing, scheduling, wire-protocol, credentials]
+relates_to: [hub, pairing, scheduling, wire-protocol, credentials, users-and-roles]
 ---
 
-SQLite via SQLAlchemy (`hub/app/db.py`), three tables:
+SQLite via SQLAlchemy (`hub/app/db.py`), six tables:
 
 - **`nodes`** (`Node` model): id (UUID), name (unique), `token_hash`
   (bearer token, hashed — never stored plaintext), `os_name`, `backends`
@@ -26,6 +26,14 @@ SQLite via SQLAlchemy (`hub/app/db.py`), three tables:
 - **`commands`**: an audit log of every command issued to a node —
   backend, action, payload, status (`pending|sent|ok|error|timeout`),
   result. Written even for commands that time out or fail to send.
+- **`credential_keys`**: saved BOINC account keys, encrypted at rest
+  (`crypto.py`) — see [credentials](credentials.md).
+- **`users`**: real per-user accounts (`username`, bcrypt
+  `password_hash`, `role`, comma-separated `scope`) — see
+  [users-and-roles](users-and-roles.md).
+- **`audit_log`**: durable "who did what" records, `username` denormalized
+  so an entry still reads correctly after that user is deleted — see
+  [users-and-roles](users-and-roles.md).
 
 Everything here persists permanently — a node paired once, and whatever
 schedule was set for it, survives hub restarts and node reconnects.

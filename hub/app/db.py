@@ -63,6 +63,39 @@ class CredentialKey(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
+class User(Base):
+    """An admin-managed account, replacing the earlier single shared
+    GRIDKEEPER_ADMIN_PASSWORD model. `scope` is a comma-separated list,
+    same lightweight convention as Node.backends -- group names for
+    role="group_manager", node ids for role="machine_manager", unused
+    (empty) for "admin"/"viewer"."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(unique=True)
+    password_hash: Mapped[str]
+    role: Mapped[str]  # "admin" | "group_manager" | "machine_manager" | "viewer"
+    scope: Mapped[str] = mapped_column(default="")
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class AuditLogEntry(Base):
+    """Durable record of who did what -- see audit.py::record_audit().
+    username is denormalized (not just user_id) so a log entry still
+    reads correctly after the user who made it is deleted."""
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    user_id: Mapped[str]
+    username: Mapped[str]
+    action: Mapped[str]
+    target: Mapped[str] = mapped_column(default="")
+    detail_json: Mapped[str | None] = mapped_column(default=None)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class Command(Base):
     __tablename__ = "commands"
 

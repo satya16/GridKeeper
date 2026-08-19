@@ -7,7 +7,7 @@ files:
   - hub/app/auth.py
   - hub/app/connections.py
   - hub/app/deps.py
-relates_to: [node, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing, credentials]
+relates_to: [node, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing, credentials, users-and-roles]
 ---
 
 The FastAPI app (GridKeeper's hub) — the "one dashboard" side of the
@@ -20,13 +20,15 @@ it's a connection registry, a generic pattern name, unrelated to the
 hub/node role rename even though both use similar words), and serves
 the REST API + dashboard HTML for the admin.
 
-Auth is intentionally minimal for v1: a single shared admin password,
-checked at `POST /api/login` and tracked via an in-memory session
-cookie (`auth.py::require_session`/`create_session`) that every other
-`/api/*` route and nothing else requires; nodes authenticate their
-WebSocket with a per-node bearer token minted at enrollment (see
-[pairing](pairing.md)). No multi-user/RBAC — see `_docs/REQUIREMENTS.md`
-§2 (Non-goals) and §9 (Security).
+**Real multi-user accounts + roles as of 2026-08-19** — see
+[users-and-roles](users-and-roles.md) for the full picture. `POST
+/api/login` now takes `{username, password}`, checked against a real
+`User` row (`db.py`), still tracked via the same in-memory session
+cookie (`auth.py::require_session`/`create_session`) every other
+`/api/*` route requires, just now keyed to a specific user id instead of
+a single shared password. Nodes still authenticate their WebSocket
+separately, with a per-node bearer token minted at enrollment (see
+[pairing](pairing.md)) — unrelated to admin/user auth.
 
 **Switched off HTTP Basic 2026-08-19** (was `auth.py::require_admin`):
 a real user reported Firefox Focus never showing Basic Auth's native

@@ -7,7 +7,7 @@ files:
   - hub/app/db.py
   - hub/app/api/credentials.py
   - hub/frontend/src/components/CredentialsSection.jsx
-relates_to: [hub, boinc-backend, dashboard-ui, data-model]
+relates_to: [hub, boinc-backend, dashboard-ui, data-model, users-and-roles]
 ---
 
 A saved-BOINC-account-key repository, added 2026-08-19 in response to a

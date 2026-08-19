@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import auth, crypto
-from ..db import CredentialKey, Node, utcnow
+from ..audit import record_audit
+from ..db import CredentialKey, Node, User, utcnow
 from ..deps import get_db
 from ..schemas import CommandOut, CredentialApplyRequest, CredentialApplyResult, CredentialCreate, CredentialOut
 from ..connections import connections
@@ -27,7 +28,7 @@ def _credential_out(cred: CredentialKey) -> CredentialOut:
 def create_credential(
     body: CredentialCreate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    admin: User = Depends(auth.require_admin_user),
 ) -> CredentialOut:
     if db.query(CredentialKey).filter(CredentialKey.name == body.name).first() is not None:
         raise HTTPException(status_code=409, detail=f"a credential named '{body.name}' already exists")
@@ -44,11 +45,15 @@ def create_credential(
     )
     db.add(cred)
     db.commit()
+    record_audit(db, admin, "create_credential", target=cred.name)
     return _credential_out(cred)
 
 
 @router.get("/api/credentials", response_model=list[CredentialOut])
-def list_credentials(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> list[CredentialOut]:
+def list_credentials(db: Session = Depends(get_db), _user: User = Depends(auth.require_session)) -> list[CredentialOut]:
+    """Available to everyone, not just admins -- metadata only (name/
+    project URL), no key material, so a group/machine manager can see
+    what's available to apply within their own scope."""
     return [_credential_out(c) for c in db.query(CredentialKey).order_by(CredentialKey.name).all()]
 
 
@@ -56,13 +61,15 @@ def list_credentials(db: Session = Depends(get_db), _admin: str = Depends(auth.r
 def delete_credential(
     credential_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    admin: User = Depends(auth.require_admin_user),
 ) -> None:
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")
+    name = cred.name
     db.delete(cred)
     db.commit()
+    record_audit(db, admin, "delete_credential", target=name)
 
 
 @router.post("/api/credentials/{credential_id}/apply", response_model=CommandOut)
@@ -70,7 +77,7 @@ async def apply_credential(
     credential_id: str,
     body: CredentialApplyRequest,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> CommandOut:
     """Single-node apply -- attaches the saved key's project to one
     node. Fleet-wide/group apply is a deliberate follow-up, not this
@@ -78,9 +85,7 @@ async def apply_credential(
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")
-    node = db.get(Node, body.node_id)
-    if node is None:
-        raise HTTPException(status_code=404, detail="no such node")
+    node = auth.get_node_or_403(db, user, body.node_id, write=True)
 
     try:
         account_key = crypto.decrypt(cred.encrypted_account_key)
@@ -89,6 +94,7 @@ async def apply_credential(
 
     result = await dispatch_command(
         db,
+        user,
         node,
         "boinc",
         "attach_project",
@@ -99,7 +105,7 @@ async def apply_credential(
     return result
 
 
-async def _apply_to_nodes(db: Session, cred: CredentialKey, nodes: list[Node]) -> list[CredentialApplyResult]:
+async def _apply_to_nodes(db: Session, user: User, cred: CredentialKey, nodes: list[Node]) -> list[CredentialApplyResult]:
     """Bulk fan-out, one attach_project dispatch per online node.
 
     Unlike a schedule policy (persisted state that a node picks up the
@@ -127,7 +133,7 @@ async def _apply_to_nodes(db: Session, cred: CredentialKey, nodes: list[Node]) -
             )
             continue
         cmd = await dispatch_command(
-            db, node, "boinc", "attach_project", {"project_url": cred.project_url, "account_key": account_key}
+            db, user, node, "boinc", "attach_project", {"project_url": cred.project_url, "account_key": account_key}
         )
         results.append(
             CredentialApplyResult(node_id=node.id, node_name=node.name, online=True, status=cmd.status, result=cmd.result)
@@ -144,25 +150,28 @@ async def apply_credential_to_group(
     credential_id: str,
     group: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> list[CredentialApplyResult]:
     """An unknown or empty group simply matches no nodes rather than
-    erroring, same as schedule.py's apply-group."""
+    erroring, same as schedule.py's apply-group. group_manager only,
+    scoped to their own group -- a machine_manager has no group-wide
+    action to take."""
+    auth.require_group_access(user, group)
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")
     nodes = db.query(Node).filter(Node.group == group).all()
-    return await _apply_to_nodes(db, cred, nodes)
+    return await _apply_to_nodes(db, user, cred, nodes)
 
 
 @router.post("/api/credentials/{credential_id}/apply-all", response_model=list[CredentialApplyResult])
 async def apply_credential_to_all(
     credential_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    admin: User = Depends(auth.require_admin_user),
 ) -> list[CredentialApplyResult]:
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")
     nodes = db.query(Node).all()
-    return await _apply_to_nodes(db, cred, nodes)
+    return await _apply_to_nodes(db, admin, cred, nodes)

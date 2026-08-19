@@ -32,9 +32,22 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  login: (password) => request('/api/login', { method: 'POST', body: JSON.stringify({ password }) }),
+  login: (username, password) => request('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request('/api/logout', { method: 'POST' }),
   checkSession: () => request('/api/session'),
+  getMe: () => request('/api/me'),
+  changeOwnPassword: (currentPassword, newPassword) =>
+    request('/api/me/password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
+  listUsers: () => request('/api/users'),
+  createUser: (username, password, role, scope) =>
+    request('/api/users', { method: 'POST', body: JSON.stringify({ username, password, role, scope }) }),
+  updateUser: (userId, changes) =>
+    request(`/api/users/${encodeURIComponent(userId)}`, { method: 'PUT', body: JSON.stringify(changes) }),
+  deleteUser: (userId) => request(`/api/users/${encodeURIComponent(userId)}`, { method: 'DELETE' }),
+  listAuditLog: () => request('/api/audit-log'),
   listNodes: () => request('/api/nodes'),
   listGroups: () => request('/api/groups'),
   setNodeGroup: (nodeId, group) =>

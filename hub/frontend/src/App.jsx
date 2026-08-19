@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ClusterOutlined, KeyOutlined, LineChartOutlined } from '@ant-design/icons'
+import { ClusterOutlined, HistoryOutlined, KeyOutlined, LineChartOutlined, UserOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { Layout, Menu, Space, Tabs, Typography } from 'antd'
 import { api, setUnauthorizedHandler } from './api.js'
 import { usePolling } from './usePolling.js'
@@ -10,6 +10,9 @@ import { LoginForm } from './components/LoginForm.jsx'
 import { CredentialsSection } from './components/CredentialsSection.jsx'
 import { MetricsSection } from './components/MetricsSection.jsx'
 import { FleetPage } from './pages/FleetPage.jsx'
+import { UsersPage } from './pages/UsersPage.jsx'
+import { AuditLogPage } from './pages/AuditLogPage.jsx'
+import { ProfilePage } from './pages/ProfilePage.jsx'
 import './App.css'
 
 const NODES_REFRESH_INTERVAL_MS = 5000
@@ -27,16 +30,24 @@ const MOBILE_BREAKPOINT_PX = 767
 // screen width makes less sense on a phone.
 const SIDER_ICON_RAIL_WIDTH = 80
 
-const PAGES = [
+const BASE_PAGES = [
   { key: 'fleet', label: 'Fleet', icon: <ClusterOutlined /> },
   { key: 'credentials', label: 'Credentials', icon: <KeyOutlined /> },
   { key: 'metrics', label: 'Metrics', icon: <LineChartOutlined /> },
 ]
+// Admin-only nav items -- everyone gets Fleet/Credentials/Metrics/Profile,
+// but only an admin can manage the user list or see who did what.
+const ADMIN_PAGES = [
+  { key: 'users', label: 'Users', icon: <UserSwitchOutlined /> },
+  { key: 'audit-log', label: 'Audit Log', icon: <HistoryOutlined /> },
+]
+const PROFILE_PAGE = { key: 'profile', label: 'Profile', icon: <UserOutlined /> }
 
 export default function App({ themeMode, onToggleTheme }) {
   // null = still checking on load, so the login form doesn't flash
   // before the session check comes back.
   const [authenticated, setAuthenticated] = useState(null)
+  const [role, setRole] = useState(null)
   const [page, setPage] = useState('fleet')
   const [siderCollapsed, setSiderCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT_PX)
@@ -45,9 +56,14 @@ export default function App({ themeMode, onToggleTheme }) {
     setUnauthorizedHandler(() => setAuthenticated(false))
     api
       .checkSession()
-      .then(() => setAuthenticated(true))
+      .then(({ role }) => {
+        setRole(role)
+        setAuthenticated(true)
+      })
       .catch(() => setAuthenticated(false))
   }, [])
+
+  const pages = [...BASE_PAGES, ...(role === 'admin' ? ADMIN_PAGES : []), PROFILE_PAGE]
 
   useEffect(() => {
     // Reactive, not just checked at click-time (selectPage below still does
@@ -72,11 +88,20 @@ export default function App({ themeMode, onToggleTheme }) {
       await api.logout()
     } finally {
       setAuthenticated(false)
+      setRole(null)
     }
   }
 
   if (authenticated === null) return null
-  if (!authenticated) return <LoginForm onLoggedIn={() => setAuthenticated(true)} />
+  if (!authenticated)
+    return (
+      <LoginForm
+        onLoggedIn={(loggedInRole) => {
+          setRole(loggedInRole)
+          setAuthenticated(true)
+        }}
+      />
+    )
 
   const selectPage = (key) => {
     setPage(key)
@@ -141,7 +166,7 @@ export default function App({ themeMode, onToggleTheme }) {
           inlineCollapsed={siderCollapsed && !isMobile}
           style={{ height: '100%' }}
           selectedKeys={[page]}
-          items={PAGES}
+          items={pages}
           onClick={({ key }) => selectPage(key)}
         />
       </Layout.Sider>
@@ -167,6 +192,11 @@ export default function App({ themeMode, onToggleTheme }) {
             items={[{ key: 'metrics', label: 'Metrics', children: <MetricsSection /> }]}
           />
         )}
+        {page === 'users' && role === 'admin' && (
+          <UsersPage nodes={nodes || []} groups={groups || []} tabBarExtraContent={tabBarExtraContent} />
+        )}
+        {page === 'audit-log' && role === 'admin' && <AuditLogPage tabBarExtraContent={tabBarExtraContent} />}
+        {page === 'profile' && <ProfilePage tabBarExtraContent={tabBarExtraContent} />}
       </Layout.Content>
     </Layout>
   )

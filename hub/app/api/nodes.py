@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import auth
-from ..db import Node, Command, utcnow
+from ..audit import record_audit
+from ..db import Node, Command, User, utcnow
 from ..deps import get_db
 from ..schemas import NodeOut, CommandOut, CommandRequest, NodeGroupUpdate
 from ..connections import connections
@@ -61,26 +62,41 @@ def _command_out(cmd: Command) -> CommandOut:
     )
 
 
+def scoped_nodes_query(db: Session, user: User):
+    """admin/viewer: every node. group_manager/machine_manager: only
+    nodes within their own scope -- confirmed with the user this should
+    restrict *visibility*, not just editing (a manager shouldn't see
+    other groups'/machines' nodes at all, matching viewer's inverse:
+    unrestricted visibility, zero edit rights)."""
+    query = db.query(Node)
+    if user.role == "group_manager":
+        return query.filter(Node.group.in_(auth.scope_list(user)))
+    if user.role == "machine_manager":
+        return query.filter(Node.id.in_(auth.scope_list(user)))
+    return query
+
+
 @router.get("/api/nodes", response_model=list[NodeOut])
-def list_nodes(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> list[NodeOut]:
-    nodes = db.query(Node).order_by(Node.name).all()
+def list_nodes(db: Session = Depends(get_db), user: User = Depends(auth.require_session)) -> list[NodeOut]:
+    nodes = scoped_nodes_query(db, user).order_by(Node.name).all()
     return [_node_out(a) for a in nodes]
 
 
 @router.get("/api/nodes/{node_id}", response_model=NodeOut)
-def get_node(node_id: str, db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> NodeOut:
-    node = db.get(Node, node_id)
-    if node is None:
-        raise HTTPException(status_code=404, detail="no such node")
+def get_node(node_id: str, db: Session = Depends(get_db), user: User = Depends(auth.require_session)) -> NodeOut:
+    node = auth.get_node_or_403(db, user, node_id, write=False)
     return _node_out(node)
 
 
 @router.get("/api/groups", response_model=list[str])
-def list_groups(db: Session = Depends(get_db), _admin: str = Depends(auth.require_session)) -> list[str]:
+def list_groups(db: Session = Depends(get_db), user: User = Depends(auth.require_session)) -> list[str]:
     """Distinct, non-empty group names currently in use -- lets the
     dashboard offer a picker instead of everyone free-typing "Lab 1" vs
-    "lab1" vs "Lab One" for the same room."""
-    rows = db.query(Node.group).filter(Node.group != "").distinct().order_by(Node.group).all()
+    "lab1" vs "Lab One" for the same room. Scoped the same way the node
+    list is: a group_manager only sees their own group(s) in this picker,
+    a machine_manager sees whatever group(s) their scoped node(s) happen
+    to be in (usually zero or one)."""
+    rows = scoped_nodes_query(db, user).filter(Node.group != "").with_entities(Node.group).distinct().order_by(Node.group).all()
     return [r[0] for r in rows]
 
 
@@ -89,21 +105,23 @@ def set_node_group(
     node_id: str,
     body: NodeGroupUpdate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> NodeGroupUpdate:
-    node = db.get(Node, node_id)
-    if node is None:
-        raise HTTPException(status_code=404, detail="no such node")
+    node = auth.get_node_or_403(db, user, node_id, write=True)
     node.group = body.group
     db.commit()
+    record_audit(db, user, "set_node_group", target=node.name, detail={"group": body.group})
     return body
 
 
-async def dispatch_command(db: Session, node: Node, backend: str, action: str, payload: dict) -> CommandOut:
+async def dispatch_command(db: Session, user: User, node: Node, backend: str, action: str, payload: dict) -> CommandOut:
     """Shared by the direct issue_command route below and
-    credentials.py's apply endpoint, which dispatches the same
+    credentials.py's apply endpoints, which dispatch the same
     attach_project command but with a saved (decrypted) account key
-    instead of one typed inline in the dashboard's attach form."""
+    instead of one typed inline in the dashboard's attach form. `user` is
+    required (not optional) so every command that ever reaches a node,
+    from any caller, gets one consistent audit-log entry here rather than
+    each caller needing to remember to log it separately."""
     if not connections.is_online(node.id):
         raise HTTPException(status_code=409, detail=f"node '{node.name}' is not connected right now")
 
@@ -136,6 +154,7 @@ async def dispatch_command(db: Session, node: Node, backend: str, action: str, p
         cmd.result_json = json.dumps({"error": "node disconnected before command could be sent"})
         cmd.completed_at = utcnow()
         db.commit()
+        record_audit(db, user, f"{backend}.{action}", target=node.name, detail={"status": cmd.status})
         return _command_out(cmd)
 
     try:
@@ -148,6 +167,7 @@ async def dispatch_command(db: Session, node: Node, backend: str, action: str, p
         cmd.result_json = json.dumps({"error": f"no response from node within {COMMAND_TIMEOUT_SECONDS}s"})
     cmd.completed_at = utcnow()
     db.commit()
+    record_audit(db, user, f"{backend}.{action}", target=node.name, detail={"status": cmd.status})
     return _command_out(cmd)
 
 
@@ -156,12 +176,10 @@ async def issue_command(
     node_id: str,
     body: CommandRequest,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> CommandOut:
-    node = db.get(Node, node_id)
-    if node is None:
-        raise HTTPException(status_code=404, detail="no such node")
-    return await dispatch_command(db, node, body.backend, body.action, body.payload)
+    node = auth.get_node_or_403(db, user, node_id, write=True)
+    return await dispatch_command(db, user, node, body.backend, body.action, body.payload)
 
 
 @router.get("/api/nodes/{node_id}/commands/{command_id}", response_model=CommandOut)
@@ -169,8 +187,9 @@ def get_command(
     node_id: str,
     command_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(auth.require_session),
+    user: User = Depends(auth.require_session),
 ) -> CommandOut:
+    auth.get_node_or_403(db, user, node_id, write=False)
     cmd = db.get(Command, command_id)
     if cmd is None or cmd.node_id != node_id:
         raise HTTPException(status_code=404, detail="no such command")

@@ -31,7 +31,6 @@ remote control.
 
 - Installing BOINC/FAH itself on a machine (the node assumes they're
   already installed; it only controls/monitors them).
-- Multi-user accounts / RBAC (single admin user for v1).
 - **Long-term historical analytics** (credit trends over weeks/months,
   metrics history that survives a hub restart) — out of scope. The
   live CPU/RAM/temperature graphs (section 8) are a short *rolling*
@@ -324,9 +323,13 @@ once" pattern as the rest of this codebase's platform-specific bits.
   plain WS is fine.
 - Nodes authenticate with a bearer token, not IP allowlisting (laptops
   move networks).
-- The dashboard itself should sit behind at minimum HTTP basic auth or a
-  single admin password for v1; proper auth can come later.
-- Commands are logged (who/when/what/result) for auditability.
+- The dashboard requires a real per-user login (session cookie, bcrypt
+  password hashing) — see [users-and-roles](knowledge-graph/users-and-roles.md)
+  for the four-tier role model (admin/group_manager/machine_manager/viewer).
+- Commands are logged (who/when/what/result) for auditability, plus a
+  separate admin-visible audit log of every state-changing action any
+  user takes (not just commands) — see
+  [users-and-roles](knowledge-graph/users-and-roles.md).
 
 ## 10. Tech stack (decided)
 

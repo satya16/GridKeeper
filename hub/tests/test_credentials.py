@@ -242,3 +242,83 @@ def test_create_credential_without_secret_key_configured_returns_500(auth_client
     )
     assert resp.status_code == 500
     assert "GRIDKEEPER_SECRET_KEY" in resp.json()["detail"]
+
+
+def test_non_admin_cannot_create_credential(auth_client, scoped_client):
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.post(
+        "/api/credentials",
+        json={"name": "x", "project_url": "https://example.org/", "account_key": "abc"},
+    )
+    assert resp.status_code == 403
+
+
+def test_non_admin_cannot_delete_credential(auth_client, scoped_client):
+    created = _create_credential(auth_client)
+    viewer = scoped_client(role="viewer")
+    assert viewer.delete(f"/api/credentials/{created['id']}").status_code == 403
+
+
+def test_non_admin_can_list_credentials(auth_client, scoped_client):
+    _create_credential(auth_client)
+    viewer = scoped_client(role="viewer")
+    resp = viewer.get("/api/credentials")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+def test_machine_manager_can_apply_credential_to_own_node(auth_client, monkeypatch):
+    enrolled = _enroll(auth_client)
+    created = _create_credential(auth_client)
+    from .conftest import make_scoped_client
+
+    mm = make_scoped_client(auth_client, role="machine_manager", scope=enrolled["node_id"])
+
+    monkeypatch.setattr(connections, "is_online", lambda wid: True)
+
+    async def fake_send_frame(wid, frame):
+        connections.resolve_pending(frame["command_id"], {"status": "ok", "result": {"attached": True}})
+        return True
+
+    monkeypatch.setattr(connections, "send_frame", fake_send_frame)
+
+    resp = mm.post(f"/api/credentials/{created['id']}/apply", json={"node_id": enrolled["node_id"]})
+    assert resp.status_code == 200
+
+
+def test_machine_manager_cannot_apply_credential_to_other_node(auth_client):
+    mine = _enroll(auth_client, "mm-mine")
+    other = _enroll(auth_client, "mm-other")
+    created = _create_credential(auth_client)
+    from .conftest import make_scoped_client
+
+    mm = make_scoped_client(auth_client, role="machine_manager", scope=mine["node_id"])
+    resp = mm.post(f"/api/credentials/{created['id']}/apply", json={"node_id": other["node_id"]})
+    assert resp.status_code == 403
+
+
+def test_group_manager_can_apply_to_own_group_not_others(auth_client):
+    w1 = _enroll(auth_client, "gc1")
+    w2 = _enroll(auth_client, "gc2")
+    auth_client.put(f"/api/nodes/{w1['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{w2['node_id']}/group", json={"group": "Lab 2"})
+    created = _create_credential(auth_client)
+    from .conftest import make_scoped_client
+
+    gm = make_scoped_client(auth_client, role="group_manager", scope="Lab 1")
+    assert gm.post(f"/api/credentials/{created['id']}/apply-group/Lab 1").status_code == 200
+    assert gm.post(f"/api/credentials/{created['id']}/apply-group/Lab 2").status_code == 403
+
+
+def test_machine_manager_cannot_apply_to_group(auth_client):
+    created = _create_credential(auth_client)
+    from .conftest import make_scoped_client
+
+    mm = make_scoped_client(auth_client, role="machine_manager", scope="some-node-id")
+    assert mm.post(f"/api/credentials/{created['id']}/apply-group/Lab 1").status_code == 403
+
+
+def test_non_admin_cannot_apply_to_all(auth_client, scoped_client):
+    created = _create_credential(auth_client)
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    assert gm.post(f"/api/credentials/{created['id']}/apply-all").status_code == 403

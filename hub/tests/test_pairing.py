@@ -81,3 +81,33 @@ def test_enroll_duplicate_name_fails(auth_client):
         "/api/enroll", json={"pairing_token": t2, "name": "dup-node-2", "os_name": "linux", "backends": []}
     )
     assert resp2.status_code == 200
+
+
+def test_group_manager_can_mint_token_for_own_group(auth_client, scoped_client):
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.post("/api/pairing-tokens", json={"label": "", "group": "Lab 1"})
+    assert resp.status_code == 200
+
+
+def test_group_manager_cannot_mint_token_for_other_group(auth_client, scoped_client):
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.post("/api/pairing-tokens", json={"label": "", "group": "Lab 2"})
+    assert resp.status_code == 403
+
+
+def test_group_manager_cannot_mint_ungrouped_token(auth_client, scoped_client):
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.post("/api/pairing-tokens", json={"label": ""})
+    assert resp.status_code == 403
+
+
+def test_machine_manager_cannot_mint_pairing_token(auth_client, scoped_client):
+    mm = scoped_client(role="machine_manager", scope="some-node-id")
+    resp = mm.post("/api/pairing-tokens", json={"label": ""})
+    assert resp.status_code == 403
+
+
+def test_viewer_cannot_mint_pairing_token(auth_client, scoped_client):
+    viewer = scoped_client(role="viewer")
+    resp = viewer.post("/api/pairing-tokens", json={"label": ""})
+    assert resp.status_code == 403

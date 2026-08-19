@@ -196,6 +196,68 @@ def test_issue_command_set_config_redacts_passkey(auth_client, monkeypatch):
     assert body["payload"]["cause"] == "cancer"
 
 
+def test_group_manager_only_sees_own_group_nodes(auth_client, scoped_client):
+    in_scope = _enroll(auth_client, "in-scope")
+    out_of_scope = _enroll(auth_client, "out-of-scope")
+    auth_client.put(f"/api/nodes/{in_scope['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{out_of_scope['node_id']}/group", json={"group": "Lab 2"})
+
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    nodes = gm.get("/api/nodes").json()
+    assert [n["name"] for n in nodes] == ["in-scope"]
+    assert gm.get(f"/api/nodes/{out_of_scope['node_id']}").status_code == 403
+    assert gm.get(f"/api/nodes/{in_scope['node_id']}").status_code == 200
+
+
+def test_group_manager_cannot_write_outside_scope(auth_client, scoped_client):
+    in_scope = _enroll(auth_client, "in-scope-2")
+    out_of_scope = _enroll(auth_client, "out-of-scope-2")
+    auth_client.put(f"/api/nodes/{in_scope['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{out_of_scope['node_id']}/group", json={"group": "Lab 2"})
+
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    assert gm.put(f"/api/nodes/{in_scope['node_id']}/group", json={"group": "Lab 1"}).status_code == 200
+    assert gm.put(f"/api/nodes/{out_of_scope['node_id']}/group", json={"group": "Lab 1"}).status_code == 403
+
+
+def test_machine_manager_scope_is_a_single_node(auth_client, scoped_client):
+    mine = _enroll(auth_client, "mine")
+    not_mine = _enroll(auth_client, "not-mine")
+
+    mm = scoped_client(role="machine_manager", scope=mine["node_id"])
+    nodes = mm.get("/api/nodes").json()
+    assert [n["name"] for n in nodes] == ["mine"]
+    assert mm.get(f"/api/nodes/{not_mine['node_id']}").status_code == 403
+    assert mm.put(f"/api/nodes/{mine['node_id']}/group", json={"group": "x"}).status_code == 200
+    assert mm.put(f"/api/nodes/{not_mine['node_id']}/group", json={"group": "x"}).status_code == 403
+
+
+def test_viewer_sees_everything_but_cannot_write(auth_client, scoped_client):
+    node = _enroll(auth_client, "viewer-target")
+
+    viewer = scoped_client(role="viewer")
+    assert len(viewer.get("/api/nodes").json()) == 1
+    assert viewer.get(f"/api/nodes/{node['node_id']}").status_code == 200
+    assert viewer.put(f"/api/nodes/{node['node_id']}/group", json={"group": "x"}).status_code == 403
+    assert (
+        viewer.post(
+            f"/api/nodes/{node['node_id']}/commands",
+            json={"backend": "boinc", "action": "resume_all", "payload": {}},
+        ).status_code
+        == 403
+    )
+
+
+def test_list_groups_is_scoped_for_group_manager(auth_client, scoped_client):
+    w1 = _enroll(auth_client, "gw1")
+    w2 = _enroll(auth_client, "gw2")
+    auth_client.put(f"/api/nodes/{w1['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{w2['node_id']}/group", json={"group": "Lab 2"})
+
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    assert gm.get("/api/groups").json() == ["Lab 1"]
+
+
 def test_issue_command_node_error_result_still_returns_200(auth_client, monkeypatch):
     """A command that reaches the node but fails there (e.g. boinccmd
     not installed) is a successful REST call reporting a failed command --
