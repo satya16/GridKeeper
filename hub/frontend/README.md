@@ -6,12 +6,11 @@ version on 2026-08-18; see
 [`_docs/knowledge-graph/dashboard-ui.md`](../../_docs/knowledge-graph/dashboard-ui.md)
 in the repo root for why and what changed.
 
-Talks to the FastAPI backend (`hub/app/`) purely over the same REST
-API the old dashboard used -- polling, not a live WebSocket from the
-browser's side (the hub's own node-facing WebSocket is unrelated).
-Auth is HTTP Basic, same as every `/api/*` route; the browser's native
-Basic-Auth challenge covers both the page load and the SPA's `fetch()`
-calls with no extra wiring needed here.
+Talks to the FastAPI backend (`hub/app/`) purely over REST -- polling,
+not a live WebSocket from the browser's side (the hub's own node-facing
+WebSocket is unrelated). Auth is a session cookie set by `POST
+/api/login`; `LoginForm.jsx` renders until that succeeds, then every
+subsequent `fetch()` just carries the cookie automatically.
 
 ## Build for the hub to serve
 
@@ -46,12 +45,9 @@ GRIDKEEPER_ADMIN_PASSWORD=<yours> npm run verify
 Runs `scripts/verify.mjs`: loads the dashboard in headless Chromium
 (Playwright, already a devDependency here), checks for console/page
 errors, confirms the BOINC/FAH collapsible forms actually open, and
-saves `verify-screenshot.png` (gitignored) for a visual check. Exists
-because "no display in this sandbox" was a recurring, documented gap
-across this project's UI work -- see the manual-verification notes in
-`_docs/TESTING.md` -- this closes it for whatever a headless browser can
-check. It can't tell you if something *looks* good, only that it
-*rendered without breaking*; look at the screenshot for the rest.
+saves `verify-screenshot.png` (gitignored) for a visual check. It can't
+tell you if something *looks* good, only that it *rendered without
+breaking*; look at the screenshot for the rest.
 
 Needs Chromium installed once: `npx playwright install chromium` (falls
 back to a system install if `--with-deps` isn't usable without sudo, as

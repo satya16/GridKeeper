@@ -7,8 +7,8 @@ compute machine, GridKeeper gives you one dashboard to see every
 machine's status and remotely start/stop projects.
 
 Full requirements and design: [`_docs/REQUIREMENTS.md`](_docs/REQUIREMENTS.md).
-How to test it: [`_docs/TESTING.md`](_docs/TESTING.md). Per-component
-detail (what's verified, what's still open): [`_docs/knowledge-graph/`](_docs/knowledge-graph/).
+Per-component detail (what's verified, what's still open, how to test
+it): [`_docs/knowledge-graph/`](_docs/knowledge-graph/).
 
 ## Install
 

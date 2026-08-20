@@ -29,15 +29,15 @@ independent background task, *not* nested in the WebSocket connection's
 task group, specifically so a network drop doesn't also suspend schedule
 enforcement.
 
-Full design rationale: `_docs/REQUIREMENTS.md` §7. Unverified caveats
-(BOINC prefs file format, `loginctl`-based idle detection): `CLAUDE.md`.
+Full design rationale: `_docs/REQUIREMENTS.md` §7.
 
-**Partially verified** (2026-08-11, local smoke test): the policy-setting
-and wire-delivery path is confirmed — `PUT /api/nodes/{id}/schedule`
-persisted correctly and the node received the `schedule` frame both on
-initial connect and on reconnect. Status stays `implemented-untested`
-because the test machine has neither BOINC nor FAH installed, so neither
-enforcement path actually ran — `apply_schedule()`'s `boinccmd
---set_global_prefs_override` call and `_fah_schedule_loop`'s
-pause/unpause calls remain unexercised. This is the next thing to verify,
-ideally on a machine with a real BOINC and/or FAH install.
+**Partially verified**: the policy-setting/wire-delivery path (`PUT
+/api/nodes/{id}/schedule` persists and pushes the `schedule` frame on
+connect/reconnect) and the underlying commands each side calls
+(`suspend_all`/`resume_all` for BOINC, `pause`/`unpause` for FAH) are all
+confirmed against real installs — see
+[boinc-backend](boinc-backend.md)/[fah-backend](fah-backend.md). Status
+stays `implemented-untested` because the schedule-specific piece on top
+of those calls hasn't been watched live: `apply_schedule()`'s
+`global_prefs_override.xml` actually changing BOINC's Activity behavior,
+and `_fah_schedule_loop` crossing a real hours/idle boundary on its own.

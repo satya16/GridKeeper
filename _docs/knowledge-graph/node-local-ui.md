@@ -9,11 +9,10 @@ relates_to: [node, boinc-backend, fah-backend, scheduling, metrics]
 
 Optional read-only status page for a single node machine, at
 `http://127.0.0.1:<local_ui_port>/` (default 8420) — **off by default**.
-Added 2026-08-18 so whoever's sitting at an enrolled lab machine can see
-what it's doing, without turning every node into something that
-demands attention by default (see [[grid_hub_school_use_case]] in
-memory: bulk-enrolled lab PCs should stay unobtrusive unless an admin
-opts a machine in).
+Added so whoever's sitting at an enrolled lab machine can see what it's
+doing, without turning every node into something that demands attention
+by default — bulk-enrolled lab PCs should stay unobtrusive unless an
+admin opts a machine in.
 
 Toggle with `grid-node local-ui {enable,disable,status}` (writes
 `local_ui_enabled`/`local_ui_port` to `config.toml`, same file

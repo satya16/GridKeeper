@@ -3,11 +3,10 @@
 A navigation layer over this codebase, not a third copy of its docs. Each
 file here is one entity (a component, data model, or protocol) with a
 short summary and links to the *other* entities it relates to, plus the
-real source of truth: actual file paths, `_docs/REQUIREMENTS.md` sections,
-and `CLAUDE.md` caveats. The point is that "what does the scheduling
-system touch, and what's still unverified about it?" should be answerable
-in one file instead of a full-codebase search — useful now, more useful
-once this project has too many moving parts to hold in one read-through.
+real source of truth: actual file paths and `_docs/REQUIREMENTS.md`
+sections. The point is that "what does the scheduling system touch, and
+what's still unverified about it?" should be answerable in one file
+instead of a full-codebase search.
 
 ## Format
 
@@ -26,30 +25,25 @@ relates_to: [hub, node, boinc-backend, fah-backend, wire-protocol]
 ```
 
 followed by a few short paragraphs: what it is, why it's shaped the way
-it is (the non-obvious part), and where to look for more (a
-`_docs/REQUIREMENTS.md` section, a `CLAUDE.md` caveat). Keep entries short
-— a paragraph or two plus the links. If an entry is growing past that,
-the entity is probably big enough to split, or the detail belongs in
-`_docs/REQUIREMENTS.md` instead with just a pointer left here.
+it is (the non-obvious part), and where to look for more. **Keep entries
+short — a paragraph or two plus the links.** A dated, blow-by-blow
+verification log belongs in git history, not here; if an entry is
+growing past that, cut it down to the durable facts (what it does now,
+current status) rather than letting it become a session diary.
 
 **`relates_to` is symmetric.** If A relates to B, B lists A back. When you
 add an edge, add it on both ends.
 
 ### Status values
 
-- `implemented-untested` — written, `py_compile`-clean, never actually
-  run.
-- `implemented-verified` — either automated-tested (`_docs/TESTING.md`'s
-  `pytest` suites) or manually confirmed working end to end (dated note
-  in the entity, e.g. "Verified 2026-08-11"). Prefer citing which —
-  automated coverage stays true; a manual verification note is a
-  snapshot that can go stale as the code changes around it.
-- `planned` — discussed, not built (e.g. tracked in "Open questions" in
-  `_docs/REQUIREMENTS.md`).
+- `implemented-untested` — written, never actually run.
+- `implemented-verified` — automated-tested (`hub/tests/`, `node/tests/`)
+  or manually confirmed working end to end (a short dated note in the
+  entity, e.g. "Verified 2026-08-19").
+- `planned` — discussed, not built (tracked in `_docs/REQUIREMENTS.md`'s
+  Open Questions).
 - `broken` — run against the real thing it targets and confirmed *not*
-  to work as written (protocol mismatch, upstream bug, etc.), as opposed
-  to `implemented-untested`'s "never actually run." Dated note in the
-  entity explains what broke and why.
+  to work as written.
 
 ## Current entities
 
@@ -59,46 +53,28 @@ add an edge, add it on both ends.
 | [node](node.md) | component | verified | the per-machine client daemon |
 | [pairing](pairing.md) | component | verified | both enrollment flows (manual token, LAN+code) |
 | [wire-protocol](wire-protocol.md) | protocol | verified | the WebSocket frame types between node and hub |
-| [data-model](data-model.md) | data-model | verified | the SQLite schema (`Node`, `Command`, `PairingToken`, `CredentialKey`, `User`, `AuditLogEntry`) |
-| [scheduling](scheduling.md) | component | untested* | hours/idle policy enforcement |
+| [data-model](data-model.md) | data-model | verified | the SQLite schema |
+| [scheduling](scheduling.md) | component | partial | hours/idle policy enforcement |
 | [metrics](metrics.md) | component | verified | CPU/RAM/temperature collection + live charts |
 | [dashboard-ui](dashboard-ui.md) | component | verified | the React + Ant Design web dashboard |
-| [boinc-backend](boinc-backend.md) | component | verified‡ | BOINC control via `boinccmd` |
+| [boinc-backend](boinc-backend.md) | component | verified | BOINC control via `boinccmd` |
 | [fah-backend](fah-backend.md) | component | verified | Folding@home control via its WebSocket API |
-| [node-local-ui](node-local-ui.md) | component | untested* | optional per-machine read-only status page, off by default |
-| [credentials](credentials.md) | component | verified | saved BOINC account-key repository, single-node apply |
+| [node-local-ui](node-local-ui.md) | component | partial | optional per-machine read-only status page, off by default |
+| [credentials](credentials.md) | component | verified | saved BOINC account-key repository |
 | [users-and-roles](users-and-roles.md) | component | verified | multi-user accounts, four-tier RBAC, audit log |
-| [testing](testing.md) | process | verified | the automated test suites + manual checklist |
+| [testing](testing.md) | process | verified | the automated test suites |
 
-\* partially verified — see the entity for exactly what was and wasn't
-exercised. As of 2026-08-11: the wire plumbing works end to end for all
-five; what was unverified then was browser-side chart/UI behavior (no
-display) and actual BOINC/FAH interaction (neither installed in the test
-environment). Both of those are resolved now (browser-side as of
-2026-08-18, see [dashboard-ui](dashboard-ui.md); BOINC/FAH interaction
-also 2026-08-18, see boinc-backend/fah-backend below) — what's left under
-this mark is narrower: [scheduling](scheduling.md)'s enforcement
-specifically on BOINC (`apply_schedule()`'s real effect on Activity
-behavior was never checked, though the daemon it'd talk to now actually
-works) and FAH's enforcement loop reacting to a real schedule boundary
-live (the underlying pause/unpause calls it uses are verified, the loop
-itself hasn't been watched crossing a boundary).
-
-‡ [boinc-backend](boinc-backend.md)'s long-standing daemon-hang bug is
-resolved as of 2026-08-18 (swapped Ubuntu's stale package for BOINC's own
-official release build) — status/command path now genuinely verified
-live, including a real parsing bug this unblocked finding and fixing
-(`run_mode` was silently always "unknown"). Still unverified: attach/detach
-and the `Projects`/`Tasks` block-parsing against a *real* attached
-project — this machine has no BOINC project account, so that data has
-never existed to parse. See the entity for the full story.
+`scheduling`'s remaining gap: `apply_schedule()`'s real effect on BOINC's
+Activity behavior, and FAH's enforcement loop crossing a real hours/idle
+boundary live, are both unverified (the underlying suspend/pause calls
+they use are verified). `node-local-ui`'s gap: never actually painted by
+a real browser, only fetched over raw HTTP.
 
 ## Maintaining this
 
-Add an entity when a new subsystem shows up (a new component, a new
-persisted data shape, a new protocol between existing components) — not
-for every function or file. When you touch an existing entity's behavior
-meaningfully, update its entry rather than letting it drift; a stale
-knowledge graph is worse than none, since it's trusted more than a stale
-comment would be. `CLAUDE.md` points here for anyone orienting themselves
-in the project for the first time.
+Add an entity when a new subsystem shows up — not for every function or
+file. When you touch an existing entity's behavior meaningfully, update
+its entry rather than letting it drift; a stale knowledge graph is worse
+than none, since it's trusted more than a stale comment would be.
+`CLAUDE.md` points here for anyone orienting themselves in the project
+for the first time.

@@ -5,39 +5,27 @@ status: implemented-verified
 files:
   - hub/tests/
   - node/tests/
-  - _docs/TESTING.md
 relates_to: [hub, node]
 ---
 
-Two automated `pytest` suites (54 tests total, all passing as of
-2026-08-11) plus a manual checklist for what they can't cover — full
-detail and run instructions in `_docs/TESTING.md`, this entry is just the
-map pointer.
+Two automated `pytest` suites, 146 tests total — run instructions in
+`CLAUDE.md`.
 
-`hub/tests/` (23 tests) uses FastAPI's `TestClient` against a real
-temp-file SQLite DB per test run, with the mDNS discovery registry
-stubbed to a no-op (no real network in a unit test) and the WebSocket
-`ConnectionRegistry` monkeypatched per-test to simulate an online node
-that responds instantly — this exercises [pairing](pairing.md)'s manual
-flow, [data-model](data-model.md) persistence, and the hub side of
-[wire-protocol](wire-protocol.md)'s command dispatch, all without a real
-node process.
+`hub/tests/` (93 tests) uses FastAPI's `TestClient` against a real
+temp-file SQLite DB, with mDNS stubbed to a no-op and the WebSocket
+`ConnectionRegistry` monkeypatched to simulate an online node. Covers
+auth/RBAC, both enrollment flows, node/credential/schedule CRUD and
+scope-permission boundaries, and command dispatch.
 
-`node/tests/` (31 tests) is pure logic with all I/O
-(`subprocess`/sockets/`datetime.now()`) monkeypatched: parsing for
-[boinc-backend](boinc-backend.md) and [fah-backend](fah-backend.md), and
+`node/tests/` (53 tests) is pure logic with all I/O
+(`subprocess`/sockets/`datetime.now()`) monkeypatched: BOINC/FAH output
+parsing against captured real responses, and
 [scheduling](scheduling.md)'s hour-wrap-past-midnight arithmetic and
-idle-detection fail-open behavior — the subtlest, easiest-to-get-wrong
-logic in the project, now locked down by tests rather than resting on
-having gotten it right by inspection.
+idle-detection fail-open behavior.
 
-Found one real regression while wiring these up (unrelated to test
-content): FastAPI's `@app.on_event` is deprecated in the installed
-version; `hub/app/main.py` now uses a `lifespan` context hub
-instead.
-
-**Not covered, by design** — see `_docs/TESTING.md`'s manual checklist:
-real `boinccmd`/FAHClient interaction, real mDNS across two machines, and
-anything rendered in a browser. Mocking those wouldn't test anything
-meaningful; the risk lives entirely in "does the real thing match the
-docs," which only the real thing answers.
+**Not covered, by design**: real `boinccmd`/FAHClient interaction (these
+have instead been verified manually against real installs — see
+[boinc-backend](boinc-backend.md)/[fah-backend](fah-backend.md)), real
+mDNS across two separate machines, and anything requiring an actual
+browser paint (frontend has its own separate Playwright smoke test, see
+[dashboard-ui](dashboard-ui.md)).
