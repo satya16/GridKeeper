@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ClusterOutlined, KeyOutlined, LineChartOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
+import { ClusterOutlined, KeyOutlined, LineChartOutlined, SafetyCertificateOutlined, ThunderboltOutlined, UserOutlined } from '@ant-design/icons'
 import { Layout, Menu, Space, Tabs, Typography } from 'antd'
 import { api, setUnauthorizedHandler } from './api.js'
 import { usePolling } from './usePolling.js'
@@ -9,6 +9,7 @@ import { LogoutButton } from './components/LogoutButton.jsx'
 import { LoginForm } from './components/LoginForm.jsx'
 import { CredentialsSection } from './components/CredentialsSection.jsx'
 import { MetricsSection } from './components/MetricsSection.jsx'
+import { PowerSection } from './components/PowerSection.jsx'
 import { FleetPage } from './pages/FleetPage.jsx'
 import { AdminConsolePage } from './pages/AdminConsolePage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
@@ -34,6 +35,7 @@ const BASE_PAGES = [
   { key: 'fleet', label: 'Fleet', icon: <ClusterOutlined /> },
   { key: 'credentials', label: 'Credentials', icon: <KeyOutlined /> },
   { key: 'metrics', label: 'Metrics', icon: <LineChartOutlined /> },
+  { key: 'power', label: 'Power', icon: <ThunderboltOutlined /> },
 ]
 // Admin-only nav item -- everyone gets Fleet/Credentials/Metrics/Profile,
 // but only an admin can manage the user list or see who did what. Users
@@ -192,6 +194,12 @@ export default function App({ themeMode, onToggleTheme }) {
           <Tabs
             tabBarExtraContent={tabBarExtraContent}
             items={[{ key: 'metrics', label: 'Metrics', children: <MetricsSection /> }]}
+          />
+        )}
+        {page === 'power' && (
+          <Tabs
+            tabBarExtraContent={tabBarExtraContent}
+            items={[{ key: 'calculator', label: 'Calculator', children: <PowerSection nodes={nodes || []} /> }]}
           />
         )}
         {page === 'admin-console' && role === 'admin' && (
