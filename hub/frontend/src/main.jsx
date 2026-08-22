@@ -52,6 +52,12 @@ function Root() {
       colorBgBase: tokens.colorBgBase,
       colorBgContainer: tokens.colorBgContainer,
       colorBorder: tokens.colorBorder,
+      // Left to the algorithm's default, this drifts from the explicit
+      // --gk-border color used by hand-rolled CSS (App.css's .sider-brand,
+      // in particular) -- e.g. Tabs' own divider line ends up a visibly
+      // different color than the sider's, breaking what should be one
+      // continuous line across the two panes.
+      colorBorderSecondary: tokens.colorBorder,
       colorText: tokens.colorText,
       colorTextSecondary: tokens.colorTextSecondary,
       colorPrimary: '#4f8cff',

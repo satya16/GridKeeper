@@ -160,10 +160,28 @@
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 0 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Every page is a lone <Tabs> direct child of .app-content (see App.jsx's
+   comment on tabBarExtraContent). Its nav bar is the page's de facto
+   header row, so it needs to match .sider-brand's height (64px) and sit
+   flush at the very top -- otherwise the divider line under the tabs
+   lands well below the sider brand's own divider instead of continuing
+   it in one straight line across the sider/content boundary. Bleeds to
+   the content edges (negative margin cancels .app-content's own side
+   padding) then re-adds it as internal padding, so the tab labels still
+   line up horizontally with the page content below. */
+.app-content > .ant-tabs > .ant-tabs-nav {
+  height: 64px;
+  margin: 0 -1.5rem 1.5rem;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
 }
 
 /* Card's own head layout (antd, see node_modules/antd/es/card/style) puts
