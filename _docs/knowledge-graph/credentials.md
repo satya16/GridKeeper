@@ -42,8 +42,8 @@ matches BOINC's `attach_project` specifically, not FAH's `set_config`.
 **Verified live**: created a real credential from a real Einstein@Home
 account key, applied it to a real enrolled node through the actual REST
 API (not just pytest), confirmed the key round-trips correctly to the
-node while the audit-log/API response shows it redacted. 19 tests in
-`hub/tests/test_credentials.py` cover create/list/delete/apply (single,
+node while the audit-log/API response shows it redacted.
+`hub/tests/test_credentials.py` covers create/list/delete/apply (single,
 group, all), scope permissions, duplicate-name rejection, 404s, the
 offline-node/no-secret-key error paths, and that an all-offline batch
 doesn't decrypt the key or bump `last_used_at`.

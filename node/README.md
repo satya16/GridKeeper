@@ -117,24 +117,18 @@ pausing/resuming stays a hub-dashboard action.
 - If neither is detected at startup, the node still connects and reports
   an empty status; re-run detection by restarting the node after
   installing BOINC/FAH.
-- The BOINC backend shells out to `boinccmd`; the FAH backend speaks
-  JSON over WebSocket to FAHClient's local API directly (`ws://127.0.0.1:7396/api/websocket`,
-  the current `fah-client` 8.x -- not the older FAHClient v7 socket
-  protocol) -- see the docstrings in `grid_node/backends/boinc.py` and
-  `fah.py` if their output format differs on your installed version and
-  the parser needs adjusting.
+- If BOINC's or FAH's output format differs on your installed version
+  and the parser needs adjusting, see the docstrings in
+  `grid_node/backends/boinc.py`/`fah.py`.
 - Pairing mode opens an unauthenticated (apart from the 6-digit code)
   HTTP listener on an OS-assigned port, bound to all interfaces, plus an
   mDNS advertisement -- fine on a trusted home/lab LAN, not something to
   expose past a firewall. See "LAN discovery & 6-digit code pairing" in
   `_docs/REQUIREMENTS.md` for the exact security posture.
-- The mDNS registration in `pairing.py` has been confirmed working (a
-  node advertising and a hub discovering/pairing it on the same
-  host) -- not yet tested across two genuinely separate machines. If the
-  hub's "Discovered on your network" list doesn't pick up a waiting
-  node across a real LAN, check `avahi-browse -a` (or similar) to
-  confirm the service is actually being advertised before assuming the
-  app logic is wrong.
+- If the hub's "Discovered on your network" list doesn't pick up a
+  waiting node across a real LAN, check `avahi-browse -a` (or similar)
+  to confirm the service is actually being advertised before assuming
+  the app logic is wrong.
 - CPU%, RAM%, and (Linux-only, best-effort) temperature are collected via
   `psutil` and sent with every status update, feeding the dashboard's
   "Live metrics" graphs -- nothing to configure, it's automatic once the
@@ -143,10 +137,6 @@ pausing/resuming stays a hub-dashboard action.
   machine's own "Schedule" section) are applied automatically: BOINC gets
   its own native preferences file rewritten (`boinccmd
   --set_global_prefs_override`), FAH gets paused/resumed by the node
-  itself on a 60s check loop. The policy push/persist/reconnect path is
-  confirmed working, and so are the underlying commands each side uses
-  (BOINC's `suspend_all`/`resume_all`, FAH's `pause`/`unpause`) against
-  live installs -- what's not yet verified is `apply_schedule()`'s
-  `global_prefs_override.xml` actually changing BOINC's real Activity
-  behavior, or watching FAH's 60s enforcement loop cross a real
-  hours/idle boundary live.
+  itself on a 60s check loop. See
+  [`_docs/knowledge-graph/scheduling.md`](../_docs/knowledge-graph/scheduling.md)
+  for current verification status.

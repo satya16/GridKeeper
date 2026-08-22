@@ -76,13 +76,11 @@ backend 403 is still the real enforcement boundary.
 
 **Verified**: real-browser Playwright pass covering user CRUD through
 the UI, role-based nav gating (Admin Console/Profile), a direct
-`fetch('/api/users')` 403 for a non-admin session, and — for the
-permissions fast-follow — a seeded node confirming every write control
-disappears for a `viewer` account while status values still render, plus
-a direct API 403 backing it up. `group_manager`/`machine_manager` scope
-isolation independently verified live: each sees and can only write to
-their own scoped node(s), confirmed via both the DOM and direct
-`/api/nodes` fetches. All 93 backend pytest cases pass, including
-scope-filtering coverage across every retrofitted router and a new
-`test_users.py`. Deployed to the production hub with the existing
-`GRIDKEEPER_ADMIN_PASSWORD` still logging in as `admin`.
+`fetch('/api/users')` 403 for a non-admin session, and a seeded node
+confirming every write control disappears for a `viewer` account while
+status values still render, backed by a direct API 403.
+`group_manager`/`machine_manager` scope isolation independently verified
+live: each sees and can only write to their own scoped node(s),
+confirmed via both the DOM and direct `/api/nodes` fetches. Deployed to
+the production hub with the existing `GRIDKEEPER_ADMIN_PASSWORD` still
+logging in as `admin`.

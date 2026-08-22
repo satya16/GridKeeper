@@ -36,9 +36,9 @@ together, so this hasn't mattered. Would need a `type` fallback/ignore
 path (already present — unknown frame types are logged and skipped, not
 fatal) before node and hub could safely run different versions.
 
-**Verified** (2026-08-11, local smoke test): all four frame types
-exchanged successfully in a live run — `status` (with real `psutil`
-metrics), `command`/`command_result` (round-tripped through a REST call
-that held open until the result arrived, including a realistic error
-case), and `schedule` (received on both initial connect and reconnect).
+**Verified**: all four frame types exchanged successfully in a live run —
+`status` (with real `psutil` metrics), `command`/`command_result`
+(round-tripped through a REST call that held open until the result
+arrived, including a realistic error case), and `schedule` (received on
+both initial connect and reconnect).
 

@@ -36,16 +36,10 @@ Same escaping discipline as [dashboard-ui](dashboard-ui.md): node
 statuses/BOINC project names are node-reported/untrusted, run through
 `html.escape()`, never interpolated raw.
 
-**Partially verified (2026-08-18):** `render_page()` and the real
-`ThreadingHTTPServer` both covered by `node/tests/test_local_ui.py` (11
-tests — including one that starts a real server on an OS-assigned port
-and fetches over real HTTP, and an XSS-escaping test). Also manually
-smoke-tested end to end on real hardware: started the real server, fed it
-this machine's actual `detect_backends()`/`collect_status()`/`metrics.collect()`
-output (real BOINC-timeout error, real FAH "no tasks" state, real
-CPU/RAM/temperature), fetched over real HTTP, confirmed the rendered HTML
-matched expectations. **Not verified: actual rendering in a real
-browser** — no browser/display available in this sandbox (same
-"no display" gap as [dashboard-ui](dashboard-ui.md) and
-[metrics](metrics.md)'s charts) — only the raw HTML/CSS was inspected,
-not how a browser actually paints it.
+**Partially verified:** `render_page()` and the real `ThreadingHTTPServer`
+covered by `node/tests/test_local_ui.py`, including a real server on an
+OS-assigned port fetched over real HTTP and an XSS-escaping test. Also
+manually smoke-tested against this machine's own real
+`detect_backends()`/`collect_status()`/`metrics.collect()` output over
+real HTTP. **Not verified: actual rendering in a real browser** — only
+the raw HTML/CSS was inspected, not how a browser paints it.

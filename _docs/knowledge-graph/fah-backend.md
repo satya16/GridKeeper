@@ -37,11 +37,8 @@ hub-side redaction as BOINC's `account_key` (see
 **Verified live** against a real `fah-client` 8.x daemon: `is_available()`,
 `get_status()`, `pause_all()`/`unpause_all()`/`set_config()` all
 round-tripped through the real command-dispatch path and confirmed via
-`config.paused`/delta pushes flipping correctly. Setting `fold_anon:
-true` genuinely got a real work unit assigned. Two real bugs found and
-fixed this way (both mismatches between the upstream `master` branch's
-protocol and what the actually-shipped 8.1.18 client speaks): a
-`state`-command no-op vs. the `pause`/`unpause` form that's actually
-honored, and a wrong `project` field path in the work-unit JSON. 7+
-tests in `node/tests/test_fah.py` cover this against captured real
-responses.
+`config.paused`/delta pushes flipping correctly; `fold_anon: true`
+genuinely got a real work unit assigned. Bugs found this way (mismatches
+between the upstream `master` branch's protocol and what the
+actually-shipped client speaks — see the "Bastet rewrite" note above) are
+covered by `node/tests/test_fah.py` fixtures captured from live output.

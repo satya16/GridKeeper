@@ -5,9 +5,9 @@ and [`README.md`](README.md) for the quickstart.
 
 ## Testing
 
-`hub/tests/` (93 tests: FastAPI `TestClient` + temp SQLite, WebSocket
-layer mocked) and `node/tests/` (53 tests: pure logic, all I/O mocked) —
-146 total, no CI yet. Run both before trusting a change:
+`hub/tests/` (FastAPI `TestClient` + temp SQLite, WebSocket layer
+mocked) and `node/tests/` (pure logic, all I/O mocked) — no CI yet. Run
+both before trusting a change:
 
 ```bash
 cd hub && source .venv/bin/activate && pytest tests/ -v

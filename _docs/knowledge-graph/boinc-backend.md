@@ -40,15 +40,9 @@ current guard already closes the realistic trigger (rapid/accidental
 double-submit).
 
 **Verified live** against a real BOINC install (BOINC's own official
-`.deb` release, not Ubuntu's stale/buggy package — see git history if
-that swap ever needs repeating) and a real Einstein@Home account:
-`suspend_all`/`resume_all`/`attach_project` all confirmed changing real
-daemon state, round-tripped through the actual WebSocket dispatch path.
-Two real parsing bugs found and fixed this way (wrong `run_mode` field
-name; nested `GUI URL:` sub-entries clobbering the project name) — both
-now covered by `node/tests/test_boinc.py` fixtures captured from live
-output. `cpu_suspend_reason` (e.g. "on batteries") also added and
-verified. Still unverified: `detach_project` against a real project (left
-attached deliberately for future testing), and the dashboard's React
-rendering of this data isn't independently browser-verified beyond the
-API response shape.
+`.deb` release — Ubuntu's own package is stale/buggy, see git history)
+and a real Einstein@Home account: `suspend_all`/`resume_all`/
+`attach_project`/`cpu_suspend_reason` all confirmed against real daemon
+state; parsing bugs found this way are covered by `node/tests/test_boinc.py`
+fixtures captured from live output. Still unverified: `detach_project`
+against a real project (left attached deliberately for future testing).

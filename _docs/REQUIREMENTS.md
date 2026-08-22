@@ -149,11 +149,12 @@ remote control.
    after a drop), the hub immediately re-sends that node's stored
    schedule policy — a node that comes back online always converges to
    the latest policy without the admin having to re-push it.
-5. **Web dashboard**: server-rendered (Jinja2) page + small amount of JS
-   (polling or a dashboard-side WebSocket) showing a card/table per
-   machine: name, online/offline, per-backend status, schedule, and
-   start/stop controls, plus a fleet-wide schedule form. No SPA framework
-   needed for v1.
+5. **Web dashboard**: React + Ant Design SPA (`hub/frontend/`), REST-
+   polled, showing a card/table per machine: name, online/offline,
+   per-backend status, schedule, and start/stop controls, plus a
+   fleet-wide schedule form. See
+   [dashboard-ui](knowledge-graph/dashboard-ui.md) for the current
+   architecture.
 6. **Persistence**: SQLite via SQLAlchemy — tables for `nodes` (includes
    each node's current schedule policy as JSON), `pairing_tokens`,
    `commands` (audit log of who told what machine to do what, and the
@@ -352,15 +353,18 @@ modeled.
 ## 10. Tech stack (decided)
 
 - **Language**: Python throughout (node + hub).
-- **Hub**: FastAPI, Uvicorn, SQLAlchemy + SQLite, Jinja2 templates,
-  native `websockets`/FastAPI WebSocket support, `httpx` (async client
-  used to dial nodes directly during LAN pairing), `zeroconf`
-  (`AsyncZeroconf`, browses mDNS for unpaired nodes).
-- **Node**: Python, `websockets` client, `tomllib` for config,
-  subprocess wrapper around `boinccmd`, raw `socket` client for FAH's
-  text/PyON protocol, `zeroconf` (registers the pairing mDNS service),
-  stdlib `http.server` for the tiny local pairing listener (kept off
-  a heavier web framework since it only ever needs two endpoints).
+- **Hub**: FastAPI, Uvicorn, SQLAlchemy + SQLite, a React + Vite + Ant
+  Design frontend (`hub/frontend/`, built and served as static assets —
+  see [dashboard-ui](knowledge-graph/dashboard-ui.md)), native
+  `websockets`/FastAPI WebSocket support, `httpx` (async client used to
+  dial nodes directly during LAN pairing), `zeroconf` (`AsyncZeroconf`,
+  browses mDNS for unpaired nodes).
+- **Node**: Python, `websockets` client (also used for FAHClient's own
+  WebSocket API — see [fah-backend](knowledge-graph/fah-backend.md)),
+  `tomllib` for config, subprocess wrapper around `boinccmd`, `zeroconf`
+  (registers the pairing mDNS service), stdlib `http.server` for the
+  tiny local pairing listener (kept off a heavier web framework since it
+  only ever needs two endpoints).
 - **Transport**: persistent outbound WebSocket from node to hub
   (chosen over polling for instant command delivery and no open inbound
   ports on node machines).

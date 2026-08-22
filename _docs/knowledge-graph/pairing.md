@@ -35,19 +35,11 @@ Two independent enrollment paths, both ending at
   and hand over credentials. Full handshake diagram in
   `_docs/REQUIREMENTS.md` §6.
 
-**Verified** (2026-08-11, local smoke test): both flows confirmed working
-end to end, including the LAN flow's mDNS advertise → browse → discover →
-direct-dial → verify → credential-handoff → "starts running with no
-restart" sequence in full — this was the single most uncertain piece in
-the whole project (untested third-party `zeroconf` on both ends) and it
-worked on the first real attempt. One real bug found and fixed in the
-process: `/pair-complete` wasn't sending the hub's *final* chosen
-name (which can differ from the node's self-reported one if the admin
-typed an override during pairing) back to the node, so the node's
-local config could permanently disagree with the dashboard on its own
-name. Fixed by adding `name` to the `/pair-complete` payload.
+**Verified**: both flows confirmed working end to end, including the LAN
+flow's full mDNS advertise → browse → discover → direct-dial → verify →
+credential-handoff → "starts running with no restart" sequence.
 
-Not yet tested: a second/different network's multicast behavior (this
-test was node and hub on the same host) — still worth confirming
+Not yet tested: a second/different network's multicast behavior (only
+verified with node and hub on the same host) — still worth confirming
 across two genuinely separate machines on a real LAN before fully
 trusting it in a school deployment.

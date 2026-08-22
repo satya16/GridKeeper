@@ -41,8 +41,8 @@ No migrations tooling; `Base.metadata.create_all()` only ever adds
 missing tables, so a schema change to an *existing* table needs a manual
 migration once this has real deployed data.
 
-**Verified** (2026-08-11, local smoke test): killed and restarted a
-node process — reconnected using only its saved config (no re-enroll),
-came back online, and its previously-set `schedule_json` was re-sent
-immediately on reconnect, exactly as designed. `commands` audit rows
-confirmed written correctly including for an error result.
+**Verified**: killed and restarted a node process — reconnected using
+only its saved config (no re-enroll), came back online, and its
+previously-set `schedule_json` was re-sent immediately on reconnect,
+exactly as designed. `commands` audit rows confirmed written correctly
+including for an error result.

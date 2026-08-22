@@ -47,11 +47,10 @@ text interpolation escapes them by default, no manual escaping needed.
 (`hub/frontend/scripts/verify.mjs`, `npm run verify` — loads the real
 built dashboard against a running hub+node, checks for console/page
 errors, exercises the collapsible forms, screenshots): real node data
-renders correctly (a live FAH work unit, a live BOINC error surfaced
-gracefully), attach/config forms work, the metrics chart's hover
-crosshair+tooltip fires correctly, mobile layout (375px) has no
-horizontal overflow, and role-based nav/control gating (see
-[users-and-roles](users-and-roles.md)) behaves correctly for every role
-including real out-of-scope 403 checks. Not yet covered: automated
-component tests (`npm run verify`'s browser smoke test is the only
-automated frontend check; no unit-test layer).
+renders correctly, forms work, the metrics chart's hover crosshair/
+tooltip fires correctly, mobile layout (375px) has no horizontal
+overflow, and role-based nav/control gating (see
+[users-and-roles](users-and-roles.md)) behaves correctly including
+out-of-scope 403 checks. Not yet covered: automated component tests —
+`npm run verify`'s browser smoke test is the only automated frontend
+check, no unit-test layer.

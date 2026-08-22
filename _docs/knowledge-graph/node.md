@@ -35,10 +35,8 @@ doubles as the heartbeat cadence, no separate heartbeat frame.
 Config lives at `~/.config/grid-node/config.toml` (mode 600, holds the
 bearer token) — see `node/grid_node/config.py`.
 
-**Verified** (2026-08-11, local smoke test): `_status_loop` and
-`_command_loop` confirmed working against a real hub (no BOINC/FAH
-installed in the test environment, so `_fah_schedule_loop` and both
-backends' actual command execution remain unverified beyond their error
-paths — see [boinc-backend](boinc-backend.md)/[fah-backend](fah-backend.md)).
-Restart-and-reconnect using only the saved config (no re-enroll) confirmed
-working, including immediate schedule re-sync on reconnect.
+**Verified**: `_status_loop`/`_command_loop` confirmed working against a
+real hub, including restart-and-reconnect using only the saved config
+(no re-enroll) with immediate schedule re-sync on reconnect. Backend
+command execution itself is verified separately — see
+[boinc-backend](boinc-backend.md)/[fah-backend](fah-backend.md).
