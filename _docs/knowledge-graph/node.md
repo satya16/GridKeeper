@@ -6,7 +6,7 @@ files:
   - node/grid_node/daemon.py
   - node/grid_node/config.py
   - node/grid_node/__main__.py
-relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, wire-protocol, testing, node-local-ui]
+relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, wire-protocol, testing, node-local-ui, power-estimate]
 ---
 
 The per-machine daemon (`grid-node`) that runs on each compute machine.

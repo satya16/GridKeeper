@@ -1,5 +1,5 @@
-"""In-memory rolling window of system metrics (CPU%, RAM%, temperature) per
-node, for the dashboard's live graphs. Deliberately not persisted to
+"""In-memory rolling window of system metrics (CPU%, RAM%, temperature,
+estimated power draw) per node, for the dashboard's live graphs. Deliberately not persisted to
 SQLite -- this is "recent live state," the same spirit as the rest of the
 dashboard, not the long-term historical analytics the requirements doc
 explicitly puts out of scope for v1. A hub restart just starts the
@@ -27,6 +27,7 @@ class MetricsStore:
                 "cpu_percent": metrics.get("cpu_percent"),
                 "ram_percent": metrics.get("ram_percent"),
                 "temperature_c": metrics.get("temperature_c"),
+                "estimated_watts": metrics.get("estimated_watts"),
             }
         )
 

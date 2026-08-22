@@ -23,6 +23,11 @@ class Config:
     # unobtrusively on bulk-enrolled lab machines. See 'grid-node local-ui'.
     local_ui_enabled: bool = False
     local_ui_port: int = 8420
+    # Rough whole-system power estimate (see grid_node/power.py) -- generic
+    # desktop-class defaults, not measured on this specific machine. Tune
+    # per-node if the hub's Power tab estimate looks off for your hardware.
+    idle_watts: float = 40.0
+    max_watts: float = 150.0
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Config":
@@ -39,6 +44,8 @@ class Config:
             poll_interval_seconds=data.get("poll_interval_seconds", 10.0),
             local_ui_enabled=data.get("local_ui_enabled", False),
             local_ui_port=data.get("local_ui_port", 8420),
+            idle_watts=data.get("idle_watts", 40.0),
+            max_watts=data.get("max_watts", 150.0),
         )
 
     def save(self, path: Path | None = None) -> None:
@@ -52,6 +59,8 @@ class Config:
             f"poll_interval_seconds = {self.poll_interval_seconds}",
             f"local_ui_enabled = {'true' if self.local_ui_enabled else 'false'}",
             f"local_ui_port = {self.local_ui_port}",
+            f"idle_watts = {self.idle_watts}",
+            f"max_watts = {self.max_watts}",
         ]
         path.write_text("\n".join(lines) + "\n")
         path.chmod(0o600)  # contains the bearer token

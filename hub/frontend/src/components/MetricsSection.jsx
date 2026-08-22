@@ -63,6 +63,7 @@ export function MetricsSection() {
     { key: 'cpu', title: 'CPU usage', field: 'cpu_percent', yMin: 0, yMax: 100, unit: '%', unitShort: '%' },
     { key: 'ram', title: 'RAM usage', field: 'ram_percent', yMin: 0, yMax: 100, unit: '%', unitShort: '%' },
     { key: 'temp', title: 'Temperature', field: 'temperature_c', yMin: 0, unit: '°C', unitShort: '°' },
+    { key: 'power', title: 'Estimated power', field: 'estimated_watts', yMin: 0, unit: 'W', unitShort: 'W' },
   ]
 
   return (

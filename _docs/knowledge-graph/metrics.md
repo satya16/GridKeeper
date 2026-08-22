@@ -8,7 +8,7 @@ files:
   - hub/app/api/metrics.py
   - hub/frontend/src/components/MetricsSection.jsx
   - hub/frontend/src/components/LineChart.jsx
-relates_to: [node, hub, dashboard-ui, wire-protocol]
+relates_to: [node, hub, dashboard-ui, wire-protocol, power-estimate]
 ---
 
 CPU%/RAM%/temperature collection and the "Live metrics" dashboard graphs.
@@ -34,6 +34,12 @@ lookup (found a real sensor on the test machine and returned a plausible
 value), the rolling-window store, and `GET /api/metrics` — confirmed
 working with real, sane-looking values (e.g. `cpu_percent: 8.5`,
 `temperature_c: 49.375`).
+
+**2026-08-21**: the `metrics` block gained a fourth field,
+`estimated_watts` — a rough power-draw estimate, not a hardware reading.
+See [power-estimate](power-estimate.md) for the estimation model and the
+new Power → Calculator dashboard tab; `MetricsSection.jsx`'s existing
+chart list picked it up as a fourth "Estimated power" chart for free.
 
 **Chart rendering + interactivity verified 2026-08-18**, once the
 dashboard moved to React ([dashboard-ui](dashboard-ui.md)) and real

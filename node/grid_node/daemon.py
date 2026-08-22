@@ -6,6 +6,7 @@ import websockets
 
 from . import local_ui
 from . import metrics as metrics_mod
+from . import power as power_mod
 from . import schedule as schedule_mod
 from .backends import boinc, fah
 from .config import Config
@@ -69,6 +70,9 @@ async def _status_loop(
         status = collect_status(active_backends)
         try:
             metrics = metrics_mod.collect()
+            metrics["estimated_watts"] = power_mod.estimate_watts(
+                metrics.get("cpu_percent"), config.idle_watts, config.max_watts
+            )
         except Exception as e:
             logger.warning("failed to collect system metrics: %s", e)
             metrics = {}

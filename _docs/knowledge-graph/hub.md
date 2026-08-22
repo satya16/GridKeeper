@@ -7,7 +7,7 @@ files:
   - hub/app/auth.py
   - hub/app/connections.py
   - hub/app/deps.py
-relates_to: [node, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing, credentials, users-and-roles]
+relates_to: [node, pairing, scheduling, metrics, dashboard-ui, data-model, wire-protocol, testing, credentials, users-and-roles, power-estimate]
 ---
 
 The FastAPI app (GridKeeper's hub). Accepts node WebSocket connections at

@@ -5,7 +5,7 @@ status: implemented-verified
 files:
   - hub/frontend/src
   - hub/app/main.py
-relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, credentials, users-and-roles]
+relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, credentials, users-and-roles, power-estimate]
 ---
 
 The admin-facing web UI — **React + Ant Design, built with Vite**

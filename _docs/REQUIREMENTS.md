@@ -317,6 +317,24 @@ approach. Temperature reporting is effectively Linux-only for now
 degrades to `null`/omitted rather than erroring — same "fail open, log
 once" pattern as the rest of this codebase's platform-specific bits.
 
+### Power estimate & cost calculator
+
+The `metrics` block also carries `estimated_watts`: a **rough
+whole-system power estimate**, not a measured reading. Each node
+linearly interpolates between its configured `idle_watts`/`max_watts`
+(generic desktop-class defaults, tunable per node) based on its
+`cpu_percent`, so it rides along the same wire message and rolling
+window as CPU/RAM/temperature with no separate protocol or hardware
+sensor dependency (no RAPL support — too inconsistent across mixed lab
+hardware).
+
+The dashboard's **Power → Calculator** tab sums `estimated_watts` across
+currently-online nodes, lets the user enter a cost-per-kWh (persisted in
+browser `localStorage`, no backend user-preferences mechanism exists for
+this yet), and projects daily/weekly/monthly kWh and cost. It's
+explicitly labeled as an estimate in the UI — GPU/disk/PSU losses aren't
+modeled.
+
 ## 9. Security
 
 - All node↔hub traffic over TLS in production (WSS). For local dev,
