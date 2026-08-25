@@ -1,0 +1,22 @@
+[project]
+name = "grid-node-watch"
+version = "0.1.0"
+description = "Generic process-watcher backend plugin for grid-node -- point it at any program by name, no per-program plugin needed"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["psutil>=5.9"]
+
+# Same integration surface as grid-node-gimps: an entry point under the
+# group grid-node's daemon.py discovers via
+# importlib.metadata.entry_points(group="grid_node.backends") (see
+# node/grid_node/backends/__init__.py::discover_backends). No import of
+# grid_node itself at runtime.
+[project.entry-points."grid_node.backends"]
+watch = "grid_node_watch.backend"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["grid_node_watch*"]

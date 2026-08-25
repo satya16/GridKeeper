@@ -16,3 +16,5 @@ hub/frontend/node_modules/
 # PyPI build output -- `python3 -m build` in node/, not committed.
 node/dist/
 node/build/
+plugins/grid-node-watch/dist/
+plugins/grid-node-watch/build/
