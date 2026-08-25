@@ -103,7 +103,10 @@ class NodeGroupUpdate(BaseModel):
 
 
 class CommandRequest(BaseModel):
-    backend: Literal["boinc", "fah"]
+    # Not a Literal["boinc", "fah"] -- a third-party backend plugin the hub
+    # has never seen source code for is a valid target too, see
+    # _docs/knowledge-graph's plugin-registry entry.
+    backend: str
     action: str
     payload: dict[str, Any] = {}
 
@@ -129,23 +132,38 @@ class DiscoveryPairResponse(BaseModel):
 
 class CredentialCreate(BaseModel):
     name: str
-    project_url: str
-    account_key: str
+    backend: str
+    static_fields: dict[str, str] = {}
+    secret: str
 
 
 class CredentialOut(BaseModel):
     id: str
     name: str
-    project_url: str
+    backend: str
+    static_fields: dict[str, str]
     created_at: str
     last_used_at: str | None
+
+
+class BackendCapabilityOut(BaseModel):
+    name: str
+    label: str
+    sensitive_fields: dict[str, list[str]]
+    credential_action: dict[str, Any] | None
+    actions: list[str]
 
 
 class CredentialApplyRequest(BaseModel):
     node_id: str
 
 
-class CredentialApplyResult(BaseModel):
+class CommandResult(BaseModel):
+    """Result of dispatching one command to one node in a fan-out batch --
+    shared shape for credentials.py's apply-group/apply-all and
+    nodes.py's commands/group/{group} and commands/all (see
+    nodes.py::dispatch_command_to_nodes)."""
+
     node_id: str
     node_name: str
     online: bool

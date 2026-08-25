@@ -64,10 +64,15 @@ function CredentialRow({ credential, nodes, groups, perms, onChanged, onNodeChan
     }
   }
 
+  const staticFieldsSummary = Object.entries(credential.static_fields || {})
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(', ')
+
   return (
     <div className="task-row">
       <span>
-        <strong>{credential.name}</strong> — {credential.project_url}
+        <strong>{credential.name}</strong> — {credential.backend}
+        {staticFieldsSummary ? ` (${staticFieldsSummary})` : ''}
         <span className="muted">
           {' — '}
           {credential.last_used_at ? `last applied ${new Date(credential.last_used_at).toLocaleString()}` : 'never applied'}
@@ -99,13 +104,24 @@ function CredentialRow({ credential, nodes, groups, perms, onChanged, onNodeChan
   )
 }
 
-export function CredentialsSection({ nodes, groups, perms, onNodeChanged }) {
+export function CredentialsSection({ nodes, groups, backends, perms, onNodeChanged }) {
   const { data: credentials, status, refresh } = usePolling(api.listCredentials, CREDENTIALS_REFRESH_INTERVAL_MS)
   const [form] = Form.useForm()
+  // Only backends that declared a CREDENTIAL_ACTION (see
+  // node/grid_node/backends/base.py) support a saved credential -- e.g.
+  // fah.py deliberately doesn't (its passkey isn't shaped like a reusable
+  // project account key), same boundary this had before it was
+  // generalized, now driven by the registry instead of hardcoded here.
+  const credentialBackends = (backends || []).filter((b) => b.credential_action)
+  const selectedBackendName = Form.useWatch('backend', form)
+  const selectedBackend = credentialBackends.find((b) => b.name === selectedBackendName)
+  const staticFieldNames = selectedBackend?.credential_action?.static_fields || []
+  const secretFieldLabel = selectedBackend?.credential_action?.key_field || 'secret'
 
   const handleCreate = async (values) => {
     try {
-      await api.createCredential(values.name.trim(), values.project_url.trim(), values.account_key.trim())
+      const staticFields = Object.fromEntries(staticFieldNames.map((f) => [f, (values[f] || '').trim()]))
+      await api.createCredential(values.name.trim(), values.backend, staticFields, values.secret.trim())
       message.success(`Saved '${values.name.trim()}'.`)
       form.resetFields()
       refresh()
@@ -116,12 +132,12 @@ export function CredentialsSection({ nodes, groups, perms, onNodeChanged }) {
 
   return (
     <Card
-      title="Saved BOINC account keys"
+      title="Saved credentials"
       extra={<span className="muted">{status}</span>}
     >
       <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-        Save a project account key once, then apply it to any machine below without pasting it into that
-        machine's attach form each time.
+        Save a project credential once, then apply it to any machine below without pasting it into that machine's
+        attach form each time.
       </Typography.Paragraph>
 
       {credentials && credentials.length ? (
@@ -145,14 +161,24 @@ export function CredentialsSection({ nodes, groups, perms, onNodeChanged }) {
           <Form.Item name="name" rules={[{ required: true }]}>
             <Input placeholder="Name (e.g. School WCG account)" style={{ width: 220 }} />
           </Form.Item>
-          <Form.Item name="project_url" rules={[{ required: true }]}>
-            <Input placeholder="Project URL" style={{ width: 220 }} />
+          <Form.Item name="backend" rules={[{ required: true }]}>
+            <Select
+              placeholder="Backend"
+              style={{ width: 160 }}
+              options={credentialBackends.map((b) => ({ value: b.name, label: b.label || b.name }))}
+              onChange={() => form.setFieldsValue(Object.fromEntries(staticFieldNames.map((f) => [f, undefined])))}
+            />
           </Form.Item>
-          <Form.Item name="account_key" rules={[{ required: true }]}>
-            <Input.Password placeholder="Account key" style={{ width: 200 }} />
+          {staticFieldNames.map((fieldName) => (
+            <Form.Item key={fieldName} name={fieldName} rules={[{ required: true }]}>
+              <Input placeholder={fieldName} style={{ width: 200 }} />
+            </Form.Item>
+          ))}
+          <Form.Item name="secret" rules={[{ required: true }]}>
+            <Input.Password placeholder={secretFieldLabel} style={{ width: 200 }} />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit">
+            <Button type="primary" htmlType="submit" disabled={!selectedBackendName}>
               Save
             </Button>
           </Form.Item>

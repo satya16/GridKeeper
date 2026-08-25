@@ -73,11 +73,12 @@ export const api = {
   createPairingToken: (label, group) =>
     request('/api/pairing-tokens', { method: 'POST', body: JSON.stringify({ label, group }) }),
   getMetrics: () => request('/api/metrics'),
+  listBackends: () => request('/api/backends'),
   listCredentials: () => request('/api/credentials'),
-  createCredential: (name, projectUrl, accountKey) =>
+  createCredential: (name, backend, staticFields, secret) =>
     request('/api/credentials', {
       method: 'POST',
-      body: JSON.stringify({ name, project_url: projectUrl, account_key: accountKey }),
+      body: JSON.stringify({ name, backend, static_fields: staticFields, secret }),
     }),
   deleteCredential: (credentialId) =>
     request(`/api/credentials/${encodeURIComponent(credentialId)}`, { method: 'DELETE' }),

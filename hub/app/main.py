@@ -14,6 +14,7 @@ from .api import pairing as pairing_api
 from .api import metrics as metrics_api
 from .api import schedule as schedule_api
 from .api import credentials as credentials_api
+from .api import backends as backends_api
 from .api import auth as auth_api
 from .api import users as users_api
 from .db import SessionLocal, init_db, utcnow
@@ -47,6 +48,7 @@ app.include_router(discovery_api.router)
 app.include_router(schedule_api.router)
 app.include_router(metrics_api.router)
 app.include_router(credentials_api.router)
+app.include_router(backends_api.router)
 app.include_router(auth_api.router)
 app.include_router(users_api.router)
 
@@ -112,6 +114,8 @@ async def node_ws(websocket: WebSocket) -> None:
                     node.last_status_json = json.dumps(frame.get("backends", {}))
                     db.commit()
                     metrics_store.record(node_id, frame.get("metrics") or {})
+                    if frame.get("capabilities"):
+                        backends_api.upsert_capabilities(db, frame["capabilities"])
                 elif frame_type == "heartbeat":
                     node.last_seen_at = utcnow()
                     db.commit()

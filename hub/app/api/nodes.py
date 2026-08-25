@@ -7,28 +7,31 @@ from sqlalchemy.orm import Session
 
 from .. import auth
 from ..audit import record_audit
-from ..db import Node, Command, User, utcnow
+from ..db import BackendCapability, Node, Command, User, utcnow
 from ..deps import get_db
-from ..schemas import NodeOut, CommandOut, CommandRequest, NodeGroupUpdate
+from ..schemas import CommandResult, NodeOut, CommandOut, CommandRequest, NodeGroupUpdate
 from ..connections import connections
 
 router = APIRouter(tags=["nodes"])
 
 COMMAND_TIMEOUT_SECONDS = 15.0
 
-# Payload fields that are long-lived credentials, not one-time tokens --
-# must never land in the commands table (or its audit-log GET response) in
-# plaintext. Keyed by (backend, action). The *unredacted* payload is still
-# what actually gets sent to the node, which needs the real value; only
-# what's persisted/returned via the API is masked.
-_SENSITIVE_PAYLOAD_FIELDS: dict[tuple[str, str], set[str]] = {
-    ("boinc", "attach_project"): {"account_key"},
-    ("fah", "set_config"): {"passkey"},
-}
 
-
-def _redact_payload(backend: str, action: str, payload: dict) -> dict:
-    sensitive = _SENSITIVE_PAYLOAD_FIELDS.get((backend, action))
+def _redact_payload(db: Session, backend: str, action: str, payload: dict) -> dict:
+    """Payload fields that are long-lived credentials, not one-time tokens
+    -- must never land in the commands table (or its audit-log GET
+    response) in plaintext. Sourced from the backend's own declared
+    SENSITIVE_FIELDS (node/grid_node/backends/base.py), reported to the hub
+    in each status frame and stored in BackendCapability -- not hardcoded
+    here, so a third-party backend plugin gets the same protection without
+    editing this file. The *unredacted* payload is still what actually gets
+    sent to the node, which needs the real value; only what's
+    persisted/returned via the API is masked. A backend the hub has never
+    heard from yet (no BackendCapability row) has nothing to redact."""
+    cap = db.get(BackendCapability, backend)
+    if cap is None:
+        return payload
+    sensitive = json.loads(cap.sensitive_fields_json).get(action)
     if not sensitive:
         return payload
     return {k: ("***redacted***" if k in sensitive else v) for k, v in payload.items()}
@@ -131,7 +134,7 @@ async def dispatch_command(db: Session, user: User, node: Node, backend: str, ac
         node_id=node.id,
         backend=backend,
         action=action,
-        payload_json=json.dumps(_redact_payload(backend, action, payload)),
+        payload_json=json.dumps(_redact_payload(db, backend, action, payload)),
         status="sent",
     )
     db.add(cmd)
@@ -180,6 +183,25 @@ async def issue_command(
 ) -> CommandOut:
     node = auth.get_node_or_403(db, user, node_id, write=True)
     return await dispatch_command(db, user, node, body.backend, body.action, body.payload)
+
+
+async def dispatch_command_to_nodes(
+    db: Session, user: User, nodes: list[Node], backend: str, action: str, payload: dict
+) -> list[CommandResult]:
+    """Tolerant fan-out over several nodes at once: an offline node is
+    reported `skipped` rather than aborting the whole batch -- a one-shot
+    command has nothing to queue for later, unlike a schedule policy (see
+    schedule.py's apply-group/apply-all). Shared by credentials.py's
+    apply-group/apply-all and this module's own commands/group/{group} and
+    commands/all below -- same behavior, one implementation."""
+    results: list[CommandResult] = []
+    for node in nodes:
+        if not connections.is_online(node.id):
+            results.append(CommandResult(node_id=node.id, node_name=node.name, online=False, status="skipped", result=None))
+            continue
+        cmd = await dispatch_command(db, user, node, backend, action, payload)
+        results.append(CommandResult(node_id=node.id, node_name=node.name, online=True, status=cmd.status, result=cmd.result))
+    return results
 
 
 @router.get("/api/nodes/{node_id}/commands/{command_id}", response_model=CommandOut)

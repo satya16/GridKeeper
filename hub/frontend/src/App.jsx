@@ -18,6 +18,7 @@ import './App.css'
 
 const NODES_REFRESH_INTERVAL_MS = 5000
 const GROUPS_REFRESH_INTERVAL_MS = 5000
+const BACKENDS_REFRESH_INTERVAL_MS = 15000
 // Matches the media query in App.css that turns the sider into a fixed
 // overlay -- antd's Layout.Sider only auto-*shrinks* at its `breakpoint`
 // prop, it doesn't become an overlay on its own (confirmed by reading
@@ -78,6 +79,11 @@ export default function App({ themeMode, onToggleTheme }) {
 
   const { data: nodes, refresh: refreshNodes } = usePolling(api.listNodes, authenticated ? NODES_REFRESH_INTERVAL_MS : null)
   const { data: groups, refresh: refreshGroups } = usePolling(api.listGroups, authenticated ? GROUPS_REFRESH_INTERVAL_MS : null)
+  // Backend capability registry (see hub/app/api/backends.py) -- lets the
+  // Fleet/Credentials pages build generic UI for a third-party backend
+  // plugin without any per-backend frontend code. Polled less aggressively
+  // than nodes/groups since it only changes on a node restart/upgrade.
+  const { data: backends } = usePolling(api.listBackends, authenticated ? BACKENDS_REFRESH_INTERVAL_MS : null)
   const perms = getPermissions(role)
 
   const onChanged = () => {
@@ -174,7 +180,14 @@ export default function App({ themeMode, onToggleTheme }) {
       </Layout.Sider>
       <Layout.Content className="app-content">
         {page === 'fleet' && (
-          <FleetPage nodes={nodes || []} groups={groups || []} perms={perms} onChanged={onChanged} tabBarExtraContent={tabBarExtraContent} />
+          <FleetPage
+            nodes={nodes || []}
+            groups={groups || []}
+            backends={backends || []}
+            perms={perms}
+            onChanged={onChanged}
+            tabBarExtraContent={tabBarExtraContent}
+          />
         )}
         {page === 'credentials' && (
           <Tabs
@@ -184,7 +197,13 @@ export default function App({ themeMode, onToggleTheme }) {
                 key: 'credentials',
                 label: 'Credentials',
                 children: (
-                  <CredentialsSection nodes={nodes || []} groups={groups || []} perms={perms} onNodeChanged={refreshNodes} />
+                  <CredentialsSection
+                    nodes={nodes || []}
+                    groups={groups || []}
+                    backends={backends || []}
+                    perms={perms}
+                    onNodeChanged={refreshNodes}
+                  />
                 ),
               },
             ]}

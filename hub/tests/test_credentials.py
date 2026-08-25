@@ -16,7 +16,12 @@ def _enroll(auth_client, name: str = "node-1") -> dict:
 def _create_credential(auth_client, name: str = "wcg-lab-account", account_key: str = "supersecret123") -> dict:
     resp = auth_client.post(
         "/api/credentials",
-        json={"name": name, "project_url": "https://www.worldcommunitygrid.org/", "account_key": account_key},
+        json={
+            "name": name,
+            "backend": "boinc",
+            "static_fields": {"project_url": "https://www.worldcommunitygrid.org/"},
+            "secret": account_key,
+        },
     )
     assert resp.status_code == 200
     return resp.json()
@@ -25,8 +30,10 @@ def _create_credential(auth_client, name: str = "wcg-lab-account", account_key: 
 def test_create_credential_never_returns_the_key(auth_client):
     body = _create_credential(auth_client)
     assert body["name"] == "wcg-lab-account"
-    assert body["project_url"] == "https://www.worldcommunitygrid.org/"
+    assert body["backend"] == "boinc"
+    assert body["static_fields"]["project_url"] == "https://www.worldcommunitygrid.org/"
     assert "account_key" not in body
+    assert "secret" not in body
     assert "key" not in body
 
 
@@ -34,7 +41,7 @@ def test_create_credential_rejects_duplicate_name(auth_client):
     _create_credential(auth_client)
     resp = auth_client.post(
         "/api/credentials",
-        json={"name": "wcg-lab-account", "project_url": "https://example.org/", "account_key": "other"},
+        json={"name": "wcg-lab-account", "backend": "boinc", "static_fields": {"project_url": "https://example.org/"}, "secret": "other"},
     )
     assert resp.status_code == 409
 
@@ -238,7 +245,7 @@ def test_create_credential_without_secret_key_configured_returns_500(auth_client
     monkeypatch.delitem(os.environ, "GRIDKEEPER_SECRET_KEY", raising=False)
     resp = auth_client.post(
         "/api/credentials",
-        json={"name": "x", "project_url": "https://example.org/", "account_key": "abc"},
+        json={"name": "x", "backend": "boinc", "static_fields": {"project_url": "https://example.org/"}, "secret": "abc"},
     )
     assert resp.status_code == 500
     assert "GRIDKEEPER_SECRET_KEY" in resp.json()["detail"]
@@ -248,7 +255,7 @@ def test_non_admin_cannot_create_credential(auth_client, scoped_client):
     gm = scoped_client(role="group_manager", scope="Lab 1")
     resp = gm.post(
         "/api/credentials",
-        json={"name": "x", "project_url": "https://example.org/", "account_key": "abc"},
+        json={"name": "x", "backend": "boinc", "static_fields": {"project_url": "https://example.org/"}, "secret": "abc"},
     )
     assert resp.status_code == 403
 
@@ -322,3 +329,31 @@ def test_non_admin_cannot_apply_to_all(auth_client, scoped_client):
     created = _create_credential(auth_client)
     gm = scoped_client(role="group_manager", scope="Lab 1")
     assert gm.post(f"/api/credentials/{created['id']}/apply-all").status_code == 403
+
+
+def test_create_credential_for_unknown_backend_rejected(auth_client):
+    resp = auth_client.post(
+        "/api/credentials",
+        json={"name": "x", "backend": "no-such-backend", "static_fields": {}, "secret": "abc"},
+    )
+    assert resp.status_code == 400
+
+
+def test_create_credential_for_backend_with_no_credential_action_rejected(auth_client):
+    """fah.py deliberately declares no CREDENTIAL_ACTION (see
+    node/grid_node/backends/fah.py) -- FAH's passkey isn't shaped like a
+    reusable saved credential, same boundary as before this was
+    generalized, now enforced structurally instead of by hardcoding."""
+    resp = auth_client.post(
+        "/api/credentials",
+        json={"name": "x", "backend": "fah", "static_fields": {}, "secret": "abc"},
+    )
+    assert resp.status_code == 400
+
+
+def test_create_credential_rejects_wrong_static_fields(auth_client):
+    resp = auth_client.post(
+        "/api/credentials",
+        json={"name": "x", "backend": "boinc", "static_fields": {"wrong_field": "y"}, "secret": "abc"},
+    )
+    assert resp.status_code == 400

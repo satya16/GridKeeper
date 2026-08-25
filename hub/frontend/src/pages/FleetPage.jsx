@@ -3,7 +3,7 @@ import { DiscoverySection } from '../components/DiscoverySection.jsx'
 import { FleetScheduleSection } from '../components/FleetScheduleSection.jsx'
 import { NodeListSection } from '../components/NodeListSection.jsx'
 
-export function FleetPage({ nodes, groups, perms, onChanged, tabBarExtraContent }) {
+export function FleetPage({ nodes, groups, backends, perms, onChanged, tabBarExtraContent }) {
   const items = [
     // Discovery/pairing is admin-or-group_manager only, same as the
     // backend (see auth.py's _require_discovery_access equivalent) --
@@ -15,7 +15,9 @@ export function FleetPage({ nodes, groups, perms, onChanged, tabBarExtraContent 
     {
       key: 'machines',
       label: 'Machines',
-      children: <NodeListSection nodes={nodes} groups={groups} canWrite={perms.canWriteNodes} onChanged={onChanged} />,
+      children: (
+        <NodeListSection nodes={nodes} groups={groups} backends={backends} canWrite={perms.canWriteNodes} onChanged={onChanged} />
+      ),
     },
     // Fleet-wide schedule apply (apply-all/apply-group) has nothing for
     // machine_manager (no group-wide action) or viewer (no writes at

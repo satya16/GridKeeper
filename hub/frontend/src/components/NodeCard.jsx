@@ -2,10 +2,17 @@ import { Card, Collapse, Divider, Typography, message } from 'antd'
 import { api } from '../api.js'
 import { BoincBlock } from './BoincBlock.jsx'
 import { FahBlock } from './FahBlock.jsx'
+import { GenericBackendBlock } from './GenericBackendBlock.jsx'
 import { SchedulePolicyForm, scheduleSummary } from './SchedulePolicyForm.jsx'
 
-export function NodeCard({ node, canWrite, onChanged }) {
+const KNOWN_BACKENDS = new Set(['boinc', 'fah'])
+
+export function NodeCard({ node, backends, canWrite, onChanged }) {
   const status = node.status || {}
+  // Any status key that isn't boinc/fah is a third-party plugin backend
+  // (see node/grid_node/backends/base.py) -- rendered with the generic
+  // fallback block instead of a bespoke component.
+  const otherBackendNames = Object.keys(status).filter((name) => !KNOWN_BACKENDS.has(name))
 
   const handleSetGroup = async () => {
     const next = window.prompt('Group for this machine (e.g. "Lab 1", "Library"; blank to ungroup):', node.group)
@@ -77,7 +84,22 @@ export function NodeCard({ node, canWrite, onChanged }) {
       <BoincBlock nodeId={node.id} boinc={status.boinc} canWrite={canWrite} onChanged={onChanged} />
       {status.boinc && status.fah && <Divider style={{ margin: '8px 0' }} />}
       <FahBlock nodeId={node.id} fah={status.fah} canWrite={canWrite} onChanged={onChanged} />
-      {!status.boinc && !status.fah && <Typography.Text type="secondary">No status reported yet.</Typography.Text>}
+      {otherBackendNames.map((name) => (
+        <div key={name}>
+          {(status.boinc || status.fah) && <Divider style={{ margin: '8px 0' }} />}
+          <GenericBackendBlock
+            nodeId={node.id}
+            backendName={name}
+            backendStatus={status[name]}
+            actions={(backends || []).find((b) => b.name === name)?.actions}
+            canWrite={canWrite}
+            onChanged={onChanged}
+          />
+        </div>
+      ))}
+      {!status.boinc && !status.fah && !otherBackendNames.length && (
+        <Typography.Text type="secondary">No status reported yet.</Typography.Text>
+      )}
 
       {canWrite ? (
         <Collapse

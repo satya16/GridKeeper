@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,11 +6,11 @@ from sqlalchemy.orm import Session
 
 from .. import auth, crypto
 from ..audit import record_audit
-from ..db import CredentialKey, Node, User, utcnow
+from ..db import BackendCapability, CredentialKey, Node, User, utcnow
 from ..deps import get_db
-from ..schemas import CommandOut, CredentialApplyRequest, CredentialApplyResult, CredentialCreate, CredentialOut
+from ..schemas import CommandOut, CommandResult, CredentialApplyRequest, CredentialCreate, CredentialOut
 from ..connections import connections
-from .nodes import dispatch_command
+from .nodes import dispatch_command, dispatch_command_to_nodes
 
 router = APIRouter(tags=["credentials"])
 
@@ -18,10 +19,30 @@ def _credential_out(cred: CredentialKey) -> CredentialOut:
     return CredentialOut(
         id=cred.id,
         name=cred.name,
-        project_url=cred.project_url,
+        backend=cred.backend,
+        static_fields=json.loads(cred.static_fields_json),
         created_at=cred.created_at.isoformat(),
         last_used_at=cred.last_used_at.isoformat() if cred.last_used_at else None,
     )
+
+
+def _credential_action_for(db: Session, backend: str) -> dict:
+    """Looks up the backend's declared CREDENTIAL_ACTION (see
+    node/grid_node/backends/base.py) from the hub's BackendCapability
+    registry, populated from a node's status frame -- not hardcoded to
+    BOINC's attach_project, so any backend that declares one works here.
+    404s the same way an unknown backend name would practically behave: no
+    node has ever reported it, so there's nothing to apply a credential
+    through."""
+    cap = db.get(BackendCapability, backend)
+    credential_action = json.loads(cap.credential_action_json) if cap and cap.credential_action_json else None
+    if credential_action is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"backend '{backend}' has no known saved-credential action -- either the hub hasn't seen a "
+            "node running it yet, or that backend doesn't support saved credentials",
+        )
+    return credential_action
 
 
 @router.post("/api/credentials", response_model=CredentialOut)
@@ -32,28 +53,36 @@ def create_credential(
 ) -> CredentialOut:
     if db.query(CredentialKey).filter(CredentialKey.name == body.name).first() is not None:
         raise HTTPException(status_code=409, detail=f"a credential named '{body.name}' already exists")
+    credential_action = _credential_action_for(db, body.backend)
+    expected_fields = set(credential_action.get("static_fields", []))
+    if set(body.static_fields) != expected_fields:
+        raise HTTPException(
+            status_code=400,
+            detail=f"backend '{body.backend}' credentials require exactly these static fields: {sorted(expected_fields)}",
+        )
     try:
-        encrypted = crypto.encrypt(body.account_key)
+        encrypted = crypto.encrypt(body.secret)
     except crypto.SecretKeyNotConfigured as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     cred = CredentialKey(
         id=str(uuid.uuid4()),
         name=body.name,
-        project_url=body.project_url,
-        encrypted_account_key=encrypted,
+        backend=body.backend,
+        static_fields_json=json.dumps(body.static_fields),
+        encrypted_secret=encrypted,
     )
     db.add(cred)
     db.commit()
-    record_audit(db, admin, "create_credential", target=cred.name)
+    record_audit(db, admin, "create_credential", target=cred.name, detail={"backend": cred.backend})
     return _credential_out(cred)
 
 
 @router.get("/api/credentials", response_model=list[CredentialOut])
 def list_credentials(db: Session = Depends(get_db), _user: User = Depends(auth.require_session)) -> list[CredentialOut]:
     """Available to everyone, not just admins -- metadata only (name/
-    project URL), no key material, so a group/machine manager can see
-    what's available to apply within their own scope."""
+    backend/static fields), no secret material, so a group/machine manager
+    can see what's available to apply within their own scope."""
     return [_credential_out(c) for c in db.query(CredentialKey).order_by(CredentialKey.name).all()]
 
 
@@ -79,79 +108,56 @@ async def apply_credential(
     db: Session = Depends(get_db),
     user: User = Depends(auth.require_session),
 ) -> CommandOut:
-    """Single-node apply -- attaches the saved key's project to one
-    node. Fleet-wide/group apply is a deliberate follow-up, not this
-    endpoint's job (see _docs/knowledge-graph/credentials.md)."""
+    """Single-node apply -- applies the saved credential to one node.
+    Fleet-wide/group apply is a deliberate follow-up, not this endpoint's
+    job (see _docs/knowledge-graph/credentials.md)."""
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")
     node = auth.get_node_or_403(db, user, body.node_id, write=True)
+    credential_action = _credential_action_for(db, cred.backend)
 
     try:
-        account_key = crypto.decrypt(cred.encrypted_account_key)
+        secret = crypto.decrypt(cred.encrypted_secret)
     except crypto.SecretKeyNotConfigured as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    result = await dispatch_command(
-        db,
-        user,
-        node,
-        "boinc",
-        "attach_project",
-        {"project_url": cred.project_url, "account_key": account_key},
-    )
+    payload = {**json.loads(cred.static_fields_json), credential_action["key_field"]: secret}
+    result = await dispatch_command(db, user, node, cred.backend, credential_action["action"], payload)
     cred.last_used_at = utcnow()
     db.commit()
     return result
 
 
-async def _apply_to_nodes(db: Session, user: User, cred: CredentialKey, nodes: list[Node]) -> list[CredentialApplyResult]:
-    """Bulk fan-out, one attach_project dispatch per online node.
+async def _apply_to_nodes(db: Session, user: User, cred: CredentialKey, nodes: list[Node]) -> list[CommandResult]:
+    """Bulk fan-out, reusing nodes.py::dispatch_command_to_nodes -- the
+    secret is only ever decrypted if at least one target node is actually
+    online (an all-offline batch is a no-op: no decrypt, no last_used_at
+    bump, same as before this was generalized)."""
+    online_nodes = [n for n in nodes if connections.is_online(n.id)]
+    if not online_nodes:
+        return [CommandResult(node_id=n.id, node_name=n.name, online=False, status="skipped", result=None) for n in nodes]
 
-    Unlike a schedule policy (persisted state that a node picks up the
-    next time it connects, see schedule.py's apply-group/apply-all),
-    attach_project is a one-shot command -- a node that's offline right
-    now simply can't receive it, there's no "queue it for later" here. So
-    offline nodes are reported as skipped rather than causing the whole
-    batch to fail, matching the tolerant style of apply-group/apply-all
-    for schedules rather than the single-node apply endpoint's strict
-    404/409 (that one is a deliberate single-target action, this one
-    expects a mixed-availability fleet)."""
-    online_nodes = [w for w in nodes if connections.is_online(w.id)]
-    account_key = None
-    if online_nodes:
-        try:
-            account_key = crypto.decrypt(cred.encrypted_account_key)
-        except crypto.SecretKeyNotConfigured as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+    credential_action = _credential_action_for(db, cred.backend)
+    try:
+        secret = crypto.decrypt(cred.encrypted_secret)
+    except crypto.SecretKeyNotConfigured as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
-    results: list[CredentialApplyResult] = []
-    for node in nodes:
-        if node not in online_nodes:
-            results.append(
-                CredentialApplyResult(node_id=node.id, node_name=node.name, online=False, status="skipped", result=None)
-            )
-            continue
-        cmd = await dispatch_command(
-            db, user, node, "boinc", "attach_project", {"project_url": cred.project_url, "account_key": account_key}
-        )
-        results.append(
-            CredentialApplyResult(node_id=node.id, node_name=node.name, online=True, status=cmd.status, result=cmd.result)
-        )
-
-    if online_nodes:
-        cred.last_used_at = utcnow()
-        db.commit()
+    payload = {**json.loads(cred.static_fields_json), credential_action["key_field"]: secret}
+    results = await dispatch_command_to_nodes(db, user, nodes, cred.backend, credential_action["action"], payload)
+    cred.last_used_at = utcnow()
+    db.commit()
     return results
 
 
-@router.post("/api/credentials/{credential_id}/apply-group/{group}", response_model=list[CredentialApplyResult])
+@router.post("/api/credentials/{credential_id}/apply-group/{group}", response_model=list[CommandResult])
 async def apply_credential_to_group(
     credential_id: str,
     group: str,
     db: Session = Depends(get_db),
     user: User = Depends(auth.require_session),
-) -> list[CredentialApplyResult]:
+) -> list[CommandResult]:
     """An unknown or empty group simply matches no nodes rather than
     erroring, same as schedule.py's apply-group. group_manager only,
     scoped to their own group -- a machine_manager has no group-wide
@@ -164,12 +170,12 @@ async def apply_credential_to_group(
     return await _apply_to_nodes(db, user, cred, nodes)
 
 
-@router.post("/api/credentials/{credential_id}/apply-all", response_model=list[CredentialApplyResult])
+@router.post("/api/credentials/{credential_id}/apply-all", response_model=list[CommandResult])
 async def apply_credential_to_all(
     credential_id: str,
     db: Session = Depends(get_db),
     admin: User = Depends(auth.require_admin_user),
-) -> list[CredentialApplyResult]:
+) -> list[CommandResult]:
     cred = db.get(CredentialKey, credential_id)
     if cred is None:
         raise HTTPException(status_code=404, detail="no such credential")

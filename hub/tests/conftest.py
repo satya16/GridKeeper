@@ -16,11 +16,42 @@ from fastapi.testclient import TestClient
 
 from app import auth as auth_module
 from app import discovery as discovery_module
+from app.api.backends import upsert_capabilities
 from app.db import Base, SessionLocal, User, engine, init_db
 from app.main import app
 
 ADMIN_PASSWORD = "test-admin-password"
 ADMIN_USERNAME = "admin"
+
+# Mirrors node/grid_node/backends/{boinc,fah}.py's real declared capabilities
+# (see backends/base.py::capabilities) -- in production a node reports these
+# in its very first status frame, before an admin could plausibly have
+# issued a command yet, so tests seed the same baseline rather than
+# depending on a real WebSocket connection.
+BOINC_CAPABILITIES = {
+    "boinc": {
+        "label": "BOINC",
+        "sensitive_fields": {"attach_project": ["account_key"]},
+        "credential_action": {"action": "attach_project", "key_field": "account_key", "static_fields": ["project_url"]},
+        "actions": ["suspend_project", "resume_project", "attach_project", "detach_project", "suspend_all", "resume_all"],
+    }
+}
+FAH_CAPABILITIES = {
+    "fah": {
+        "label": "Folding@home",
+        "sensitive_fields": {"set_config": ["passkey"]},
+        "credential_action": None,
+        "actions": ["pause_all", "unpause_all", "pause_slot", "unpause_slot", "set_config"],
+    }
+}
+
+
+def seed_capabilities(capabilities: dict) -> None:
+    db = SessionLocal()
+    try:
+        upsert_capabilities(db, capabilities)
+    finally:
+        db.close()
 
 
 async def _noop() -> None:
@@ -36,6 +67,7 @@ discovery_module.registry.stop = _noop
 @pytest.fixture()
 def client():
     init_db()
+    seed_capabilities({**BOINC_CAPABILITIES, **FAH_CAPABILITIES})
     with TestClient(app) as c:
         yield c
     with engine.begin() as conn:
