@@ -64,6 +64,8 @@ add an edge, add it on both ends.
 | [users-and-roles](users-and-roles.md) | component | verified | multi-user accounts, four-tier RBAC, audit log |
 | [testing](testing.md) | process | verified | the automated test suites |
 | [power-estimate](power-estimate.md) | component | verified | rough power-draw estimate + electricity-cost calculator |
+| [plugin-registry](plugin-registry.md) | component | verified | third-party backend plugins via entry points + a hub-side capability registry |
+| [gimps-backend](gimps-backend.md) | component | verified | GIMPS/mprime backend -- the real third-party proof of plugin-registry |
 
 `scheduling`'s remaining gap: `apply_schedule()`'s real effect on BOINC's
 Activity behavior, and FAH's enforcement loop crossing a real hours/idle

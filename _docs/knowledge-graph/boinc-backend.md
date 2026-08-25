@@ -4,7 +4,7 @@ type: component
 status: implemented-verified
 files:
   - node/grid_node/backends/boinc.py
-relates_to: [node, scheduling, credentials]
+relates_to: [node, scheduling, credentials, plugin-registry]
 ---
 
 Controls a locally-installed BOINC client by shelling out to `boinccmd`
@@ -19,8 +19,12 @@ RPC's auth handshake. `get_status()` parses `boinccmd
 account authenticator. The hub (`hub/app/api/nodes.py::_redact_payload`)
 masks `account_key` before persisting a command to the audit-log table
 or echoing it back from the API — the real key still reaches the node
-over the WebSocket, only what's stored/returned is redacted. New
-sensitive payload fields go in `_SENSITIVE_PAYLOAD_FIELDS` there.
+over the WebSocket, only what's stored/returned is redacted. This is now
+declared here, not hardcoded on the hub: `SENSITIVE_FIELDS =
+{"attach_project": {"account_key"}}` and `CREDENTIAL_ACTION` (module-level
+in `boinc.py`), reported to the hub via the wire (see
+[plugin-registry](plugin-registry.md)) rather than a hub-side dict keyed
+by `(backend, action)`.
 
 `apply_schedule()` (used by [scheduling](scheduling.md)) writes a temp
 `global_prefs_override.xml` via `boinccmd --set_global_prefs_override` +

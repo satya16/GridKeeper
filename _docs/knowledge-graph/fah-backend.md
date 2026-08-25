@@ -4,7 +4,7 @@ type: component
 status: implemented-verified
 files:
   - node/grid_node/backends/fah.py
-relates_to: [node, scheduling]
+relates_to: [node, scheduling, plugin-registry]
 ---
 
 Controls a locally-running FAHClient by speaking JSON over its WebSocket

@@ -5,7 +5,7 @@ status: implemented-verified
 files:
   - hub/frontend/src
   - hub/app/main.py
-relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, credentials, users-and-roles, power-estimate]
+relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, credentials, users-and-roles, power-estimate, plugin-registry]
 ---
 
 The admin-facing web UI — **React + Ant Design, built with Vite**
@@ -34,14 +34,18 @@ algorithm + `--gk-*` CSS custom properties for the app's own SVG/CSS that
 antd's algorithm doesn't reach), and logout via `tabBarExtraContent` —
 no separate header bar.
 
-Sections: `DiscoverySection` (pair-by-code, see [pairing](pairing.md)),
-`FleetScheduleSection` + each `NodeCard`'s own schedule form (see
-[scheduling](scheduling.md)), `NodeListSection` (group filter + `NodeCard`
-grid), `BoincBlock`/`FahBlock` (per-backend status + controls, see
-[boinc-backend](boinc-backend.md)/[fah-backend](fah-backend.md)), and
-`MetricsSection`/`LineChart` (see [metrics](metrics.md)). Node
-names/project names are node-reported, untrusted strings — React's JSX
-text interpolation escapes them by default, no manual escaping needed.
+Sections: `DiscoverySection` (pair-by-code plus bulk multi-select pairing,
+see [pairing](pairing.md)), `FleetScheduleSection` + `GroupActionsSection`
+(group/all command dispatch, see [hub](hub.md)) + each `NodeCard`'s own
+schedule form (see [scheduling](scheduling.md)), `NodeListSection` (group
+filter + `NodeCard` grid), `BoincBlock`/`FahBlock` (per-backend status +
+controls, see [boinc-backend](boinc-backend.md)/[fah-backend](fah-backend.md)),
+`GenericBackendBlock` (fallback for any backend that isn't boinc/fah —
+raw status JSON + an action picker built from `GET /api/backends`, see
+[plugin-registry](plugin-registry.md)), and `MetricsSection`/`LineChart`
+(see [metrics](metrics.md)). Node names/project names are node-reported,
+untrusted strings — React's JSX text interpolation escapes them by
+default, no manual escaping needed.
 
 **Verified**, including in a real browser via Playwright
 (`hub/frontend/scripts/verify.mjs`, `npm run verify` — loads the real
@@ -54,3 +58,19 @@ overflow, and role-based nav/control gating (see
 out-of-scope 403 checks. Not yet covered: automated component tests —
 `npm run verify`'s browser smoke test is the only automated frontend
 check, no unit-test layer.
+
+`verify.mjs` itself was found stale 2026-08-24 (its `login()` helper still
+targeted the single-admin-password prompt from before
+[users-and-roles](users-and-roles.md)'s real per-user login existed, so it
+had silently never completed a real run since that change) — fixed, and
+extended to cover `GroupActionsSection` and the generic backend-driven
+credential form; both confirmed rendering real registry data
+(`GET /api/backends`) in a real browser against a real hub+node+GIMPS-plugin
+session. Also found and fixed a real, pre-existing (not from this session's
+other changes — confirmed by reproducing it with those changes stashed
+out first) mobile overflow: `.ant-tabs-nav`'s bleed-then-repad margin
+trick wasn't re-scaled for the `@media (max-width: 640px)` breakpoint's
+reduced `.app-content` padding (`App.css`). The bulk-pairing dialog itself
+was exercised via `hub/tests/test_discovery.py` (backend) but not yet
+against a real browser with real discovered machines — no multi-machine
+LAN available to this session.

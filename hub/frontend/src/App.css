@@ -197,6 +197,17 @@
     padding: 0.75rem;
     gap: 1rem;
   }
+  /* .ant-tabs-nav's bleed-then-repad trick above assumes it's cancelling
+     .app-content's padding exactly (1.5rem both) -- once that padding
+     shrinks to 0.75rem here, the un-adjusted -1.5rem margin still bleeds
+     the full 1.5rem, overflowing the viewport by the difference (confirmed
+     via a real 375px-viewport Playwright run: .ant-tabs-nav measured wider
+     than the viewport). Mirror the same reduced value on both sides so the
+     bleed-then-repad still cancels out at this breakpoint too. */
+  .app-content > .ant-tabs > .ant-tabs-nav {
+    margin: 0 -0.75rem 1rem;
+    padding: 0 0.75rem;
+  }
   .ant-card-head-wrapper {
     flex-wrap: wrap;
     row-gap: 2px;

@@ -6,12 +6,16 @@ files:
   - node/grid_node/daemon.py
   - node/grid_node/config.py
   - node/grid_node/__main__.py
-relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, wire-protocol, testing, node-local-ui, power-estimate]
+relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, wire-protocol, testing, node-local-ui, power-estimate, plugin-registry]
 ---
 
 The per-machine daemon (`grid-node`) that runs on each compute machine.
-Detects which backends are present ([boinc-backend](boinc-backend.md),
-[fah-backend](fah-backend.md)) at startup, then runs three
+`BACKENDS` (formerly a hardcoded `{"boinc": boinc, "fah": fah}` dict) is
+now `backends.discover_backends()` — any package registered under the
+`grid_node.backends` entry-point group, boinc/fah included (see
+[plugin-registry](plugin-registry.md)). Detects which backends are
+present ([boinc-backend](boinc-backend.md), [fah-backend](fah-backend.md),
+or a third-party plugin) at startup, then runs three
 concurrent loops from `daemon.py::run()`:
 
 - `_status_loop` — polls backend status + [metrics](metrics.md) and sends

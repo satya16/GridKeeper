@@ -419,10 +419,25 @@ before packaging the hub.
   `PUT /api/nodes/{id}/group`, `GET /api/groups`, and
   `POST /api/schedule/apply-group/{group}` for per-room hours. See
   `_docs/knowledge-graph/data-model.md`, `pairing.md`, `scheduling.md`,
-  `dashboard-ui.md`. Grouping is currently schedule-only — extending
-  group-scoped *commands* (e.g. "suspend all of Lab 1") beyond schedule
-  is still open if that turns out to matter in practice.
-- Bulk *pairing* (walking through several discovered-but-unpaired
-  machines in one dashboard flow) instead of one code at a time — matters
-  more once someone's onboarding a whole lab in one sitting rather than
-  adding a machine or two.
+  `dashboard-ui.md`.
+- ~~Grouping is currently schedule-only — extending group-scoped
+  *commands* (e.g. "suspend all of Lab 1") beyond schedule~~ — **built**:
+  `POST /api/nodes/commands/group/{group}` and `.../commands/all`, backed
+  by a shared `nodes.py::dispatch_command_to_nodes` fan-out (also reused
+  by credentials' apply-group/apply-all). Dashboard: Fleet > Machines'
+  "Group actions" panel. See `_docs/knowledge-graph/hub.md`.
+- ~~Bulk *pairing* (walking through several discovered-but-unpaired
+  machines in one dashboard flow) instead of one code at a time~~ —
+  **built**: `POST /api/discovery/pair-batch`, tolerant per-item (one
+  wrong code doesn't abort the rest); dashboard's Discovery tab gained
+  multi-select + a shared group/schedule bulk-pair bar. Each machine's
+  code is still read off its own screen — that's the security model
+  (§6.5), this only collapses the *dashboard* side into one submit. See
+  `_docs/knowledge-graph/pairing.md`.
+- Third-party **backend plugins**: any package registering under the
+  `grid_node.backends` entry-point group (see
+  `_docs/knowledge-graph/plugin-registry.md`) — no longer limited to the
+  two backends shipped in this repo. Proven with a real one,
+  `plugins/grid-node-gimps/` (GIMPS/mprime) — see
+  `_docs/knowledge-graph/gimps-backend.md` for what was actually
+  live-verified vs. left honest gaps.
