@@ -283,3 +283,81 @@ def test_issue_command_node_error_result_still_returns_200(auth_client, monkeypa
     body = resp.json()
     assert body["status"] == "error"
     assert "boinccmd not found" in body["result"]["error"]
+
+
+def test_issue_command_to_group_dispatches_to_members_and_skips_offline(auth_client, monkeypatch):
+    online_node = _enroll(auth_client, "lab-1")
+    offline_node = _enroll(auth_client, "lab-2")
+    other_group_node = _enroll(auth_client, "library-1")
+    auth_client.put(f"/api/nodes/{online_node['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{offline_node['node_id']}/group", json={"group": "Lab 1"})
+    auth_client.put(f"/api/nodes/{other_group_node['node_id']}/group", json={"group": "Library"})
+
+    monkeypatch.setattr(connections, "is_online", lambda wid: wid == online_node["node_id"])
+
+    sent_frames = []
+
+    async def fake_send_frame(wid, frame):
+        sent_frames.append(frame)
+        connections.resolve_pending(frame["command_id"], {"status": "ok", "result": {"run_mode": "never"}})
+        return True
+
+    monkeypatch.setattr(connections, "send_frame", fake_send_frame)
+
+    resp = auth_client.post(
+        "/api/nodes/commands/group/Lab 1", json={"backend": "boinc", "action": "suspend_all", "payload": {}}
+    )
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) == 2  # only Lab 1's two members
+
+    by_node = {r["node_id"]: r for r in results}
+    assert by_node[online_node["node_id"]]["status"] == "ok"
+    assert by_node[offline_node["node_id"]]["status"] == "skipped"
+    assert len(sent_frames) == 1
+
+
+def test_issue_command_to_group_unknown_group_returns_empty_list(auth_client):
+    resp = auth_client.post(
+        "/api/nodes/commands/group/does-not-exist", json={"backend": "boinc", "action": "suspend_all", "payload": {}}
+    )
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_issue_command_to_group_manager_scoped_to_own_group(auth_client, scoped_client):
+    w1 = _enroll(auth_client, "gc1")
+    auth_client.put(f"/api/nodes/{w1['node_id']}/group", json={"group": "Lab 1"})
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+
+    assert gm.post(
+        "/api/nodes/commands/group/Lab 1", json={"backend": "boinc", "action": "suspend_all", "payload": {}}
+    ).status_code == 200
+    assert gm.post(
+        "/api/nodes/commands/group/Lab 2", json={"backend": "boinc", "action": "suspend_all", "payload": {}}
+    ).status_code == 403
+
+
+def test_issue_command_to_all_dispatches_to_every_online_node(auth_client, monkeypatch):
+    w1 = _enroll(auth_client, "w1")
+    w2 = _enroll(auth_client, "w2")
+
+    monkeypatch.setattr(connections, "is_online", lambda wid: True)
+
+    async def fake_send_frame(wid, frame):
+        connections.resolve_pending(frame["command_id"], {"status": "ok", "result": {}})
+        return True
+
+    monkeypatch.setattr(connections, "send_frame", fake_send_frame)
+
+    resp = auth_client.post("/api/nodes/commands/all", json={"backend": "boinc", "action": "suspend_all", "payload": {}})
+    assert resp.status_code == 200
+    results = resp.json()
+    assert {r["node_id"] for r in results} == {w1["node_id"], w2["node_id"]}
+    assert all(r["status"] == "ok" for r in results)
+
+
+def test_issue_command_to_all_requires_admin(auth_client, scoped_client):
+    gm = scoped_client(role="group_manager", scope="Lab 1")
+    resp = gm.post("/api/nodes/commands/all", json={"backend": "boinc", "action": "suspend_all", "payload": {}})
+    assert resp.status_code == 403

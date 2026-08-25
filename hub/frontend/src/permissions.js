@@ -20,5 +20,7 @@ export function getPermissions(role) {
     canAccessDiscovery: isAdmin || isGroupManager,
     canApplyScheduleToAll: isAdmin,
     canApplyScheduleToGroup: isAdmin || isGroupManager,
+    canIssueCommandsToGroup: isAdmin || isGroupManager,
+    canIssueCommandsToAll: isAdmin,
   }
 }

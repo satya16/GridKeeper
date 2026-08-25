@@ -82,6 +82,15 @@ try {
   /* no FAH block on this deployment -- fine */
 }
 
+// B2 addition: the group-actions toolbar (Fleet > Machines) -- admin/
+// group_manager only.
+let groupActionsOk = false
+try {
+  groupActionsOk = await page.getByText('Group actions').isVisible({ timeout: 3000 })
+} catch {
+  /* not shown for this role -- fine */
+}
+
 // Plugin-ecosystem addition: the generic backend-driven credential form
 // (Credentials tab) -- admin-only, built on GET /api/backends rather than
 // hardcoded boinc/fah, so seeing it render with real options confirms
@@ -134,6 +143,7 @@ console.log(`title: ${title}`)
 console.log(`ant-design cards rendered: ${nodeCardCount}`)
 console.log(`BOINC attach form opens: ${attachFormOk}`)
 console.log(`FAH config form opens: ${fahFormOk}`)
+console.log(`group actions toolbar visible: ${groupActionsOk}`)
 console.log(`credential backend select shows BOINC: ${credentialBackendSelectOk}`)
 console.log(`page errors: ${errors.length ? errors.join('; ') : 'none'}`)
 console.log(`console errors: ${consoleErrors.length ? consoleErrors.join('; ') : 'none'}`)

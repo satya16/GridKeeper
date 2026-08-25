@@ -57,6 +57,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ backend, action, payload }),
     }),
+  issueCommandToGroup: (group, backend, action, payload = {}) =>
+    request(`/api/nodes/commands/group/${encodeURIComponent(group)}`, {
+      method: 'POST',
+      body: JSON.stringify({ backend, action, payload }),
+    }),
+  issueCommandToAll: (backend, action, payload = {}) =>
+    request('/api/nodes/commands/all', { method: 'POST', body: JSON.stringify({ backend, action, payload }) }),
   setNodeSchedule: (nodeId, policy) =>
     request(`/api/nodes/${encodeURIComponent(nodeId)}/schedule`, { method: 'PUT', body: JSON.stringify(policy) }),
   applySchedule: (group, policy) =>

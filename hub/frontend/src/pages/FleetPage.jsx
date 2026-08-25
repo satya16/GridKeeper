@@ -1,6 +1,7 @@
 import { Tabs } from 'antd'
 import { DiscoverySection } from '../components/DiscoverySection.jsx'
 import { FleetScheduleSection } from '../components/FleetScheduleSection.jsx'
+import { GroupActionsSection } from '../components/GroupActionsSection.jsx'
 import { NodeListSection } from '../components/NodeListSection.jsx'
 
 export function FleetPage({ nodes, groups, backends, perms, onChanged, tabBarExtraContent }) {
@@ -16,7 +17,17 @@ export function FleetPage({ nodes, groups, backends, perms, onChanged, tabBarExt
       key: 'machines',
       label: 'Machines',
       children: (
-        <NodeListSection nodes={nodes} groups={groups} backends={backends} canWrite={perms.canWriteNodes} onChanged={onChanged} />
+        <>
+          <NodeListSection nodes={nodes} groups={groups} backends={backends} canWrite={perms.canWriteNodes} onChanged={onChanged} />
+          {perms.canIssueCommandsToGroup && (
+            <GroupActionsSection
+              groups={groups}
+              backends={backends}
+              canIssueToAll={perms.canIssueCommandsToAll}
+              onIssued={onChanged}
+            />
+          )}
+        </>
       ),
     },
     // Fleet-wide schedule apply (apply-all/apply-group) has nothing for

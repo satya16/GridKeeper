@@ -204,6 +204,33 @@ async def dispatch_command_to_nodes(
     return results
 
 
+@router.post("/api/nodes/commands/group/{group}", response_model=list[CommandResult])
+async def issue_command_to_group(
+    group: str,
+    body: CommandRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(auth.require_session),
+) -> list[CommandResult]:
+    """The group-scoped counterpart to schedule.py's apply-group/
+    credentials.py's apply-group -- "suspend all of Lab 1" without walking
+    node cards one at a time. An unknown/empty group matches no nodes
+    rather than erroring, same as those. group_manager+, scoped to their
+    own group."""
+    auth.require_group_access(user, group)
+    nodes = db.query(Node).filter(Node.group == group).all()
+    return await dispatch_command_to_nodes(db, user, nodes, body.backend, body.action, body.payload)
+
+
+@router.post("/api/nodes/commands/all", response_model=list[CommandResult])
+async def issue_command_to_all(
+    body: CommandRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(auth.require_admin_user),
+) -> list[CommandResult]:
+    nodes = db.query(Node).all()
+    return await dispatch_command_to_nodes(db, admin, nodes, body.backend, body.action, body.payload)
+
+
 @router.get("/api/nodes/{node_id}/commands/{command_id}", response_model=CommandOut)
 def get_command(
     node_id: str,
