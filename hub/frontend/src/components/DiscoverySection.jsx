@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Alert, Button, Card, Checkbox, Input, Space, Typography, message } from 'antd'
 import { api } from '../api.js'
 import { usePolling } from '../usePolling.js'
+import { SchedulePolicyForm } from './SchedulePolicyForm.jsx'
 
 const DISCOVERY_REFRESH_INTERVAL_MS = 4000
 
@@ -48,17 +49,18 @@ function DiscoveryCard({ node, checked, onCheck, code, onCodeChange, onPaired })
 // B1: pair several discovered-but-unpaired machines in one dashboard
 // sitting. Each machine's code is still read off its own screen (that's
 // the security model, see _docs/REQUIREMENTS.md section 6.5) -- this only
-// collapses the dashboard side into one submit with a shared group
-// instead of one open/fill/close cycle per machine.
+// collapses the dashboard side into one submit with a shared group/
+// schedule instead of one open/fill/close cycle per machine.
 function BulkPairBar({ selectedIds, codes, onCleared, onPaired }) {
   const [group, setGroup] = useState('')
+  const [scheduling, setScheduling] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (schedule) => {
     setSubmitting(true)
     try {
       const pairs = selectedIds.map((id) => ({ discovery_id: id, code: codes[id] || '', name: '', group }))
-      const results = await api.pairDiscoveredBatch(pairs)
+      const results = await api.pairDiscoveredBatch(pairs, schedule)
       const ok = results.filter((r) => r.ok).length
       const failed = results.filter((r) => !r.ok)
       message.info(
@@ -80,10 +82,17 @@ function BulkPairBar({ selectedIds, codes, onCleared, onPaired }) {
         <Space wrap>
           <strong>{selectedIds.length} selected</strong>
           <Input placeholder="Group for all selected (optional)" style={{ width: 220 }} value={group} onChange={(e) => setGroup(e.target.value)} />
+          <Checkbox checked={scheduling} onChange={(e) => setScheduling(e.target.checked)}>
+            Set a schedule for all selected
+          </Checkbox>
         </Space>
-        <Button type="primary" loading={submitting} disabled={submitting || !selectedIds.length} onClick={handleSubmit}>
-          Pair {selectedIds.length} selected
-        </Button>
+        {scheduling ? (
+          <SchedulePolicyForm submitLabel={`Pair ${selectedIds.length} selected`} onSubmit={(policy) => handleSubmit(policy)} />
+        ) : (
+          <Button type="primary" loading={submitting} disabled={submitting || !selectedIds.length} onClick={() => handleSubmit(null)}>
+            Pair {selectedIds.length} selected
+          </Button>
+        )}
       </Space>
     </Card>
   )
@@ -95,6 +104,7 @@ export function DiscoverySection({ onPaired }) {
   const [banner, setBanner] = useState(null)
   const [selected, setSelected] = useState(new Set())
   const [codes, setCodes] = useState({})
+  const [tokenSchedule, setTokenSchedule] = useState(null) // pending {label, group} awaiting a schedule submit, or null
 
   const handlePaired = () => {
     refresh()
@@ -112,14 +122,22 @@ export function DiscoverySection({ onPaired }) {
 
   const setCode = (discoveryId, code) => setCodes((prev) => ({ ...prev, [discoveryId]: code }))
 
+  const createToken = async (label, group, schedule) => {
+    try {
+      const created = await api.createPairingToken(label, group, schedule)
+      setBanner({ token: created.token, label, group })
+    } catch (err) {
+      window.alert(`Failed to create pairing token: ${err.message}`)
+    }
+  }
+
   const handleNewToken = async () => {
     const label = window.prompt('Label for this machine (optional):', '') || ''
     const group = window.prompt('Group for this machine (e.g. "Lab 1"; optional):', '') || ''
-    try {
-      const { token } = await api.createPairingToken(label, group)
-      setBanner({ token, label, group })
-    } catch (err) {
-      window.alert(`Failed to create pairing token: ${err.message}`)
+    if (window.confirm('Set a default schedule for machines paired with this token? (Cancel = no restrictions)')) {
+      setTokenSchedule({ label, group })
+    } else {
+      await createToken(label, group, null)
     }
   }
 
@@ -133,6 +151,18 @@ export function DiscoverySection({ onPaired }) {
           New pairing token
         </Button>
       </Space>
+
+      {tokenSchedule && (
+        <Card size="small" style={{ marginBottom: 12 }} title="Default schedule for this token's machines">
+          <SchedulePolicyForm
+            submitLabel="Create token"
+            onSubmit={async (policy) => {
+              await createToken(tokenSchedule.label, tokenSchedule.group, policy)
+              setTokenSchedule(null)
+            }}
+          />
+        </Card>
+      )}
 
       {banner && (
         <Alert

@@ -48,29 +48,6 @@ class AuditLogEntryOut(BaseModel):
     created_at: str
 
 
-class PairingTokenCreate(BaseModel):
-    label: str = ""
-    group: str = ""
-
-
-class PairingTokenOut(BaseModel):
-    token: str
-    label: str
-    group: str
-
-
-class EnrollRequest(BaseModel):
-    pairing_token: str
-    name: str
-    os_name: str = "unknown"
-    backends: list[str] = []
-
-
-class EnrollResponse(BaseModel):
-    node_id: str
-    bearer_token: str
-
-
 class SchedulePolicy(BaseModel):
     """Hours/idle restrictions on when a machine should be donating cycles.
     BOINC enforces this itself once pushed as BOINC preferences (it has its
@@ -84,6 +61,31 @@ class SchedulePolicy(BaseModel):
     active_end_hour: int = 6
     only_when_idle: bool = False
     idle_threshold_minutes: int = 3
+
+
+class PairingTokenCreate(BaseModel):
+    label: str = ""
+    group: str = ""
+    schedule: SchedulePolicy | None = None
+
+
+class PairingTokenOut(BaseModel):
+    token: str
+    label: str
+    group: str
+    schedule: SchedulePolicy | None = None
+
+
+class EnrollRequest(BaseModel):
+    pairing_token: str
+    name: str
+    os_name: str = "unknown"
+    backends: list[str] = []
+
+
+class EnrollResponse(BaseModel):
+    node_id: str
+    bearer_token: str
 
 
 class NodeOut(BaseModel):
@@ -139,6 +141,7 @@ class DiscoveryPairBatchItem(BaseModel):
 
 class DiscoveryPairBatchRequest(BaseModel):
     pairs: list[DiscoveryPairBatchItem]
+    schedule: SchedulePolicy | None = None  # applied to every successfully-paired node, see B3
 
 
 class DiscoveryPairBatchItemResult(BaseModel):

@@ -111,3 +111,34 @@ def test_viewer_cannot_mint_pairing_token(auth_client, scoped_client):
     viewer = scoped_client(role="viewer")
     resp = viewer.post("/api/pairing-tokens", json={"label": ""})
     assert resp.status_code == 403
+
+
+def test_pairing_token_with_schedule_seeds_node_schedule(auth_client):
+    resp = auth_client.post(
+        "/api/pairing-tokens",
+        json={
+            "label": "",
+            "group": "Lab 1",
+            "schedule": {"enabled": True, "restrict_hours": True, "active_start_hour": 22, "active_end_hour": 6},
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["schedule"]["enabled"] is True
+    token = body["token"]
+
+    auth_client.post(
+        "/api/enroll", json={"pairing_token": token, "name": "scheduled-node", "os_name": "linux", "backends": []}
+    )
+    nodes = auth_client.get("/api/nodes").json()
+    assert nodes[0]["schedule"]["enabled"] is True
+    assert nodes[0]["schedule"]["active_start_hour"] == 22
+
+
+def test_pairing_token_without_schedule_leaves_node_unscheduled(auth_client):
+    token = _mint_token(auth_client)
+    auth_client.post(
+        "/api/enroll", json={"pairing_token": token, "name": "unscheduled-node", "os_name": "linux", "backends": []}
+    )
+    nodes = auth_client.get("/api/nodes").json()
+    assert nodes[0]["schedule"] is None

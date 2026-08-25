@@ -112,6 +112,23 @@ def test_pair_batch_tolerates_partial_failure(auth_client, monkeypatch):
     assert nodes[0]["name"] == "machine-1"
 
 
+def test_pair_batch_applies_schedule_to_all_successful(auth_client, monkeypatch):
+    _seed_discovered("disc-1", addr="10.0.0.5", port=9001, hostname="machine-1")
+    _install_fake_node_http(monkeypatch, {"10.0.0.5:9001": "111111"})
+
+    resp = auth_client.post(
+        "/api/discovery/pair-batch",
+        json={
+            "pairs": [{"discovery_id": "disc-1", "code": "111111", "name": "", "group": ""}],
+            "schedule": {"enabled": True, "restrict_hours": True, "active_start_hour": 22, "active_end_hour": 6},
+        },
+    )
+    assert resp.status_code == 200
+    node = auth_client.get("/api/nodes").json()[0]
+    assert node["schedule"]["enabled"] is True
+    assert node["schedule"]["active_start_hour"] == 22
+
+
 def test_pair_batch_group_manager_scoped_to_own_group(auth_client, scoped_client, monkeypatch):
     _seed_discovered("disc-1", addr="10.0.0.5", port=9001, hostname="machine-1")
     _install_fake_node_http(monkeypatch, {"10.0.0.5:9001": "111111"})

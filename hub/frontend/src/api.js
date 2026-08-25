@@ -77,10 +77,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ code, name, group }),
     }),
-  pairDiscoveredBatch: (pairs) =>
-    request('/api/discovery/pair-batch', { method: 'POST', body: JSON.stringify({ pairs }) }),
-  createPairingToken: (label, group) =>
-    request('/api/pairing-tokens', { method: 'POST', body: JSON.stringify({ label, group }) }),
+  pairDiscoveredBatch: (pairs, schedule = null) =>
+    request('/api/discovery/pair-batch', { method: 'POST', body: JSON.stringify({ pairs, schedule }) }),
+  createPairingToken: (label, group, schedule = null) =>
+    request('/api/pairing-tokens', { method: 'POST', body: JSON.stringify({ label, group, schedule }) }),
   getMetrics: () => request('/api/metrics'),
   listBackends: () => request('/api/backends'),
   listCredentials: () => request('/api/credentials'),

@@ -1,3 +1,4 @@
+import json
 import os
 
 import httpx
@@ -53,6 +54,7 @@ async def _pair_one(
     code: str,
     name: str,
     group: str,
+    schedule_json: str | None,
 ) -> tuple[str, str]:
     """The actual code-verify -> create_node -> credential-handoff
     handshake (see _docs/REQUIREMENTS.md section 6), factored out of
@@ -88,6 +90,7 @@ async def _pair_one(
         os_name=verify_data.get("os_name", "unknown"),
         backends=verify_data.get("backends", []),
         group=group,
+        schedule_json=schedule_json,
     )
 
     async with httpx.AsyncClient(timeout=PAIR_HTTP_TIMEOUT_SECONDS) as client:
@@ -124,7 +127,9 @@ async def pair_discovered(
         # afterward).
         auth.require_group_access(user, body.group)
 
-    node_id, name = await _pair_one(db, _public_hub_url(request), discovery_id, body.code, body.name, body.group)
+    node_id, name = await _pair_one(
+        db, _public_hub_url(request), discovery_id, body.code, body.name, body.group, schedule_json=None
+    )
     record_audit(db, user, "pair_discovered_node", target=name, detail={"group": body.group})
     return DiscoveryPairResponse(node_id=node_id, name=name)
 
@@ -143,17 +148,22 @@ async def pair_discovered_batch(
     security model, see _docs/REQUIREMENTS.md section 6.5); this just
     collapses the dashboard side of pairing N machines into one submit.
     Tolerant per-item, same as credentials.py's apply-group/apply-all: one
-    wrong code doesn't abort the rest of the batch."""
+    wrong code doesn't abort the rest of the batch. `schedule`, if given,
+    is applied to every successfully-paired node immediately (B3 -- an
+    action taken at pairing time, not stored group metadata)."""
     _require_discovery_access(user)
     if user.role == "group_manager":
         for pair in body.pairs:
             auth.require_group_access(user, pair.group)
 
     hub_url = _public_hub_url(request)
+    schedule_json = json.dumps(body.schedule.model_dump()) if body.schedule else None
     results: list[DiscoveryPairBatchItemResult] = []
     for pair in body.pairs:
         try:
-            node_id, name = await _pair_one(db, hub_url, pair.discovery_id, pair.code, pair.name, pair.group)
+            node_id, name = await _pair_one(
+                db, hub_url, pair.discovery_id, pair.code, pair.name, pair.group, schedule_json
+            )
             record_audit(db, user, "pair_discovered_node", target=name, detail={"group": pair.group, "batch": True})
             results.append(DiscoveryPairBatchItemResult(discovery_id=pair.discovery_id, ok=True, node_id=node_id, name=name))
         except HTTPException as e:

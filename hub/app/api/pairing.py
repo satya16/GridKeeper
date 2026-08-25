@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -6,7 +8,7 @@ from ..audit import record_audit
 from ..db import Node, PairingToken, User, utcnow
 from ..deps import get_db
 from ..enrollment import create_node
-from ..schemas import EnrollRequest, EnrollResponse, PairingTokenCreate, PairingTokenOut
+from ..schemas import EnrollRequest, EnrollResponse, PairingTokenCreate, PairingTokenOut, SchedulePolicy
 
 router = APIRouter(tags=["pairing"])
 
@@ -20,16 +22,22 @@ def create_pairing_token(
     """A token's `group`, if set, carries over to whichever node redeems
     it (see enroll() below) -- so an admin onboarding a whole lab can mint
     one token per room and every machine paired with it lands in that
-    group automatically, no per-machine follow-up edit needed. Minting is
-    admin/group_manager only (nothing new for a machine_manager or viewer
-    to enroll into); a group_manager's token is forced into their own
-    scope so they can't hand out a token for a group they can't manage."""
+    group automatically, no per-machine follow-up edit needed. `schedule`,
+    if set, is seeded onto that node the moment it's created too (B3: a
+    token, unlike a group, is a real row that can carry its own attributes
+    -- see db.py::PairingToken and _docs/knowledge-graph/data-model.md's
+    "groups have no attributes of their own" design note for why this
+    isn't stored on the group instead). Minting is admin/group_manager
+    only (nothing new for a machine_manager or viewer to enroll into); a
+    group_manager's token is forced into their own scope so they can't
+    hand out a token for a group they can't manage."""
     auth.require_group_access(user, body.group)
     token = auth.new_pairing_token()
-    db.add(PairingToken(token=token, label=body.label, group=body.group))
+    schedule_json = json.dumps(body.schedule.model_dump()) if body.schedule else None
+    db.add(PairingToken(token=token, label=body.label, group=body.group, schedule_json=schedule_json))
     db.commit()
     record_audit(db, user, "create_pairing_token", target=body.group or "(no group)", detail={"label": body.label})
-    return PairingTokenOut(token=token, label=body.label, group=body.group)
+    return PairingTokenOut(token=token, label=body.label, group=body.group, schedule=body.schedule)
 
 
 @router.post("/api/enroll", response_model=EnrollResponse)
@@ -44,7 +52,12 @@ def enroll(body: EnrollRequest, db: Session = Depends(get_db)) -> EnrollResponse
         raise HTTPException(status_code=400, detail=f"a node named '{body.name}' is already enrolled")
 
     node_id, bearer_token = create_node(
-        db, name=body.name, os_name=body.os_name, backends=body.backends, group=pt.group
+        db,
+        name=body.name,
+        os_name=body.os_name,
+        backends=body.backends,
+        group=pt.group,
+        schedule_json=pt.schedule_json,
     )
 
     pt.used_at = utcnow()

@@ -40,6 +40,7 @@ class PairingToken(Base):
     token: Mapped[str] = mapped_column(primary_key=True)
     label: Mapped[str] = mapped_column(default="")
     group: Mapped[str] = mapped_column(default="")  # inherited by the node that redeems this token
+    schedule_json: Mapped[str | None] = mapped_column(default=None)  # applied to the node the moment it's created
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     used_at: Mapped[datetime | None] = mapped_column(default=None)
     used_by_node_id: Mapped[str | None] = mapped_column(default=None)
@@ -175,9 +176,15 @@ def _migrate_credential_keys(conn) -> None:
             )
 
 
+def _migrate_pairing_tokens(conn) -> None:
+    _add_column_if_missing(conn, "pairing_tokens", "schedule_json", "VARCHAR")
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
     inspector = inspect(engine)
     with engine.begin() as conn:
         if "credential_keys" in inspector.get_table_names():
             _migrate_credential_keys(conn)
+        if "pairing_tokens" in inspector.get_table_names():
+            _migrate_pairing_tokens(conn)

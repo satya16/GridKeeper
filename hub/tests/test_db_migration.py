@@ -15,7 +15,7 @@ import tempfile
 
 from sqlalchemy import create_engine, inspect, text
 
-from app.db import _migrate_credential_keys
+from app.db import _migrate_credential_keys, _migrate_pairing_tokens
 
 
 def _fresh_engine():
@@ -109,6 +109,27 @@ def test_migrate_credential_keys_noop_on_already_current_schema():
 
         columns = {c["name"] for c in inspect(engine).get_columns("credential_keys")}
         assert "project_url" not in columns  # never added when not migrating from the old shape
+    finally:
+        engine.dispose()
+        os.unlink(path)
+
+
+def test_migrate_pairing_tokens_adds_schedule_column():
+    engine, path = _fresh_engine()
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "CREATE TABLE pairing_tokens (token VARCHAR PRIMARY KEY, label VARCHAR, "
+                    '"group" VARCHAR, created_at DATETIME, used_at DATETIME, used_by_node_id VARCHAR)'
+                )
+            )
+        with engine.begin() as conn:
+            _migrate_pairing_tokens(conn)
+            _migrate_pairing_tokens(conn)  # idempotent
+
+        columns = {c["name"] for c in inspect(engine).get_columns("pairing_tokens")}
+        assert "schedule_json" in columns
     finally:
         engine.dispose()
         os.unlink(path)
