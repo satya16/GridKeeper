@@ -39,6 +39,18 @@ FAH_HOST = "127.0.0.1"
 FAH_PORT = 7396
 FAH_WS_URL = f"ws://{FAH_HOST}:{FAH_PORT}/api/websocket"
 
+NAME = "fah"
+LABEL = "Folding@home"
+
+# passkey is a long-lived credential (see set_config below) -- never
+# persisted/echoed in plaintext by the hub (hub/app/api/nodes.py).
+SENSITIVE_FIELDS = {"set_config": {"passkey"}}
+
+# No CREDENTIAL_ACTION: FAH's set_config takes a passkey tied to a specific
+# user/team, not a reusable project account key shaped like BOINC's
+# attach_project -- out of scope for the saved-credential repository, same
+# boundary this codebase already drew (see _docs/knowledge-graph/credentials.md).
+
 
 class FahError(RuntimeError):
     pass

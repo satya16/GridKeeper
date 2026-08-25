@@ -17,6 +17,19 @@ import tempfile
 
 BOINCCMD = "boinccmd"
 
+NAME = "boinc"
+LABEL = "BOINC"
+
+# account_key is a long-lived project credential (see attach_project below) --
+# never persisted/echoed in plaintext by the hub (hub/app/api/nodes.py).
+SENSITIVE_FIELDS = {"attach_project": {"account_key"}}
+
+# Lets the hub's saved-credential repository (hub/app/api/credentials.py)
+# apply a saved account key via attach_project without hardcoding BOINC's
+# shape -- project_url travels as a static (non-secret) field alongside the
+# encrypted account_key.
+CREDENTIAL_ACTION = {"action": "attach_project", "key_field": "account_key", "static_fields": ["project_url"]}
+
 
 class BoincError(RuntimeError):
     pass

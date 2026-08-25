@@ -8,12 +8,13 @@ from . import local_ui
 from . import metrics as metrics_mod
 from . import power as power_mod
 from . import schedule as schedule_mod
-from .backends import boinc, fah
+from .backends import base as backends_base
+from .backends import fah, discover_backends
 from .config import Config
 
 logger = logging.getLogger("grid_node")
 
-BACKENDS = {"boinc": boinc, "fah": fah}
+BACKENDS = discover_backends()
 
 MIN_BACKOFF_SECONDS = 1.0
 MAX_BACKOFF_SECONDS = 60.0
@@ -37,6 +38,15 @@ def collect_status(active_backends: list[str]) -> dict:
             logger.warning("failed to get %s status: %s", name, e)
             status[name] = {"error": str(e)}
     return status
+
+
+def collect_capabilities(active_backends: list[str]) -> dict:
+    """Backend-declared metadata the hub can't get any other way (hub and
+    node are separate deployables, no shared Python import) -- sensitive
+    payload fields for redaction, saved-credential shape, and the action
+    list, so the hub can support a third-party backend it has no code for.
+    See backends/base.py::capabilities and hub/app/api/nodes.py."""
+    return {name: backends_base.capabilities(BACKENDS[name]) for name in active_backends}
 
 
 async def _execute_command(frame: dict) -> dict:
@@ -66,6 +76,10 @@ async def _status_loop(
     policy_holder: schedule_mod.PolicyHolder,
     state_box: local_ui.StateBox | None,
 ) -> None:
+    # Computed once per connection (not per poll) since it's static for the
+    # lifetime of the process -- capabilities only change on a node restart
+    # (e.g. after a plugin upgrade), unlike status which changes every poll.
+    capabilities = collect_capabilities(active_backends)
     while True:
         status = collect_status(active_backends)
         try:
@@ -76,7 +90,9 @@ async def _status_loop(
         except Exception as e:
             logger.warning("failed to collect system metrics: %s", e)
             metrics = {}
-        await ws.send(json.dumps({"type": "status", "backends": status, "metrics": metrics}))
+        await ws.send(
+            json.dumps({"type": "status", "backends": status, "metrics": metrics, "capabilities": capabilities})
+        )
         if state_box is not None:
             policy = policy_holder.get()
             state_box.update(
@@ -87,6 +103,26 @@ async def _status_loop(
                 schedule_running=schedule_mod.should_run(policy),
             )
         await asyncio.sleep(config.poll_interval_seconds)
+
+
+def _apply_native_schedules(active_backends: list[str], policy: schedule_mod.SchedulePolicy) -> None:
+    """Backends with their own native idle/hours engine (see boinc.py's
+    apply_schedule -- BOINC already solves this better than we could from
+    outside, per _docs/REQUIREMENTS.md section 7) declare an apply_schedule
+    function; anything else is enforced by daemon.py's own per-backend
+    schedule loop instead (see _fah_schedule_loop below for the FAH
+    precedent). Generic over BACKENDS rather than hardcoding "boinc" so a
+    future backend with its own native scheduler doesn't need another edit
+    here."""
+    for name in active_backends:
+        mod = BACKENDS[name]
+        apply_schedule = getattr(mod, "apply_schedule", None)
+        if apply_schedule is None:
+            continue
+        try:
+            apply_schedule(policy.to_dict())
+        except Exception as e:
+            logger.warning("failed to apply %s schedule: %s", name, e)
 
 
 async def _command_loop(ws, policy_holder: schedule_mod.PolicyHolder, active_backends: list[str]) -> None:
@@ -109,11 +145,7 @@ async def _command_loop(ws, policy_holder: schedule_mod.PolicyHolder, active_bac
             policy = schedule_mod.SchedulePolicy.from_dict(frame.get("policy") or {})
             logger.info("received schedule policy: %s", policy.to_dict())
             policy_holder.set(policy)
-            if "boinc" in active_backends:
-                try:
-                    await asyncio.to_thread(boinc.apply_schedule, policy.to_dict())
-                except Exception as e:
-                    logger.warning("failed to apply BOINC schedule: %s", e)
+            await asyncio.to_thread(_apply_native_schedules, active_backends, policy)
 
         else:
             logger.warning("unknown frame type from hub: %r", frame_type)

@@ -13,6 +13,10 @@ dependencies = [
 [project.scripts]
 grid-node = "grid_node.__main__:main"
 
+[project.entry-points."grid_node.backends"]
+boinc = "grid_node.backends.boinc"
+fah = "grid_node.backends.fah"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
