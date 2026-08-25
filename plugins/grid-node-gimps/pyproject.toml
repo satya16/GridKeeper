@@ -1,0 +1,23 @@
+[project]
+name = "grid-node-gimps"
+version = "0.1.0"
+description = "GIMPS (mprime) backend plugin for grid-node -- a real third-party grid_node.backends plugin, not part of grid-node itself"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+# This is the entire integration surface with grid-node: an entry point
+# under the group grid-node's own daemon.py discovers via
+# importlib.metadata.entry_points(group="grid_node.backends") (see
+# node/grid_node/backends/__init__.py::discover_backends). No import of
+# grid_node itself is needed at runtime -- this package only needs to be
+# installed into the same environment as grid-node.
+[project.entry-points."grid_node.backends"]
+gimps = "grid_node_gimps.backend"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["grid_node_gimps*"]

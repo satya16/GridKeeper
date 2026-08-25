@@ -79,6 +79,16 @@ This writes `~/.config/grid-node/config.toml` directly (mode 600 -- it
 holds a bearer token) and detects which backends (BOINC/FAH) are present,
 skipping pairing mode on the next `grid-node run`.
 
+## Third-party backends
+
+BOINC/FAH aren't special-cased -- any `pip`-installed package registered
+under the `grid_node.backends` entry-point group is picked up
+automatically, same as them (see `grid_node/backends/base.py` for the
+interface, `grid_node/backends/__init__.py::discover_backends()` for the
+mechanism). `pip install grid-node grid-node-gimps` (in
+`plugins/grid-node-gimps/` in this repo) is a real example -- a GIMPS/
+mprime backend that needed zero changes to this package.
+
 ## Local status page (optional, off by default)
 
 Nodes run headless by design -- fine for a bulk-enrolled lab machine
