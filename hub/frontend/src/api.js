@@ -65,11 +65,13 @@ export const api = {
       body: JSON.stringify(policy),
     }),
   listDiscovered: () => request('/api/discovery'),
-  pairDiscovered: (discoveryId, code) =>
+  pairDiscovered: (discoveryId, code, name = '', group = '') =>
     request(`/api/discovery/${encodeURIComponent(discoveryId)}/pair`, {
       method: 'POST',
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, name, group }),
     }),
+  pairDiscoveredBatch: (pairs) =>
+    request('/api/discovery/pair-batch', { method: 'POST', body: JSON.stringify({ pairs }) }),
   createPairingToken: (label, group) =>
     request('/api/pairing-tokens', { method: 'POST', body: JSON.stringify({ label, group }) }),
   getMetrics: () => request('/api/metrics'),

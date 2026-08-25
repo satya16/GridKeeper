@@ -130,6 +130,25 @@ class DiscoveryPairResponse(BaseModel):
     name: str
 
 
+class DiscoveryPairBatchItem(BaseModel):
+    discovery_id: str
+    code: str
+    name: str = ""
+    group: str = ""
+
+
+class DiscoveryPairBatchRequest(BaseModel):
+    pairs: list[DiscoveryPairBatchItem]
+
+
+class DiscoveryPairBatchItemResult(BaseModel):
+    discovery_id: str
+    ok: bool
+    node_id: str | None = None
+    name: str | None = None
+    error: str | None = None
+
+
 class CredentialCreate(BaseModel):
     name: str
     backend: str
