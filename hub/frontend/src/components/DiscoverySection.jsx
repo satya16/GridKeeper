@@ -1,6 +1,18 @@
 import { useState } from 'react'
-import { Alert, Button, Card, Checkbox, Input, Space, Typography, message } from 'antd'
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Checkbox,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 import { usePolling } from '../usePolling.js'
 import { SchedulePolicyForm } from './SchedulePolicyForm.jsx'
 
@@ -14,34 +26,38 @@ function DiscoveryCard({ node, checked, onCheck, code, onCodeChange, onPaired })
     e.preventDefault()
     try {
       const result = await api.pairDiscovered(node.discovery_id, code)
-      message.success(`Paired '${result.name}'.`)
+      notify.success(`Paired '${result.name}'.`)
       onPaired()
     } catch (err) {
-      message.error(`Pairing failed: ${err.message}`)
+      notify.error(`Pairing failed: ${err.message}`)
     }
   }
 
   return (
-    <Card size="small" styles={{ body: { display: 'flex', flexDirection: 'column', gap: 6 } }}>
-      <span style={{ fontWeight: 600 }}>
-        <Checkbox checked={checked} onChange={(e) => onCheck(e.target.checked)} style={{ marginRight: 8 }} />
-        {node.hostname}
-      </span>
-      <span className="muted">
-        {address}:{node.port}
-        {backends}
-      </span>
-      <form onSubmit={handlePair} style={{ display: 'flex', gap: 6 }}>
-        <Input
-          placeholder="6-digit code"
-          inputMode="numeric"
-          maxLength={6}
-          required
-          value={code}
-          onChange={(e) => onCodeChange(e.target.value)}
-        />
-        <Button htmlType="submit">Pair</Button>
-      </form>
+    <Card sx={{ width: 260 }}>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', fontWeight: 600 }}>
+          <Checkbox checked={checked} onChange={(e) => onCheck(e.target.checked)} size="small" sx={{ mr: 1, p: 0 }} />
+          {node.hostname}
+        </Box>
+        <span className="muted">
+          {address}:{node.port}
+          {backends}
+        </span>
+        <Stack component="form" direction="row" spacing={0.75} onSubmit={handlePair}>
+          <TextField
+            size="small"
+            placeholder="6-digit code"
+            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 6 } }}
+            required
+            value={code}
+            onChange={(e) => onCodeChange(e.target.value)}
+          />
+          <Button type="submit" variant="outlined">
+            Pair
+          </Button>
+        </Stack>
+      </CardContent>
     </Card>
   )
 }
@@ -63,37 +79,52 @@ function BulkPairBar({ selectedIds, codes, onCleared, onPaired }) {
       const results = await api.pairDiscoveredBatch(pairs, schedule)
       const ok = results.filter((r) => r.ok).length
       const failed = results.filter((r) => !r.ok)
-      message.info(
+      notify.info(
         `Paired ${ok}/${results.length} machine(s)` +
           (failed.length ? `. Failed: ${failed.map((r) => `${r.discovery_id} (${r.error})`).join('; ')}` : '')
       )
       onCleared()
       onPaired()
     } catch (err) {
-      message.error(`Bulk pairing failed: ${err.message}`)
+      notify.error(`Bulk pairing failed: ${err.message}`)
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <Card size="small" style={{ marginBottom: 12, background: 'var(--gk-card)' }}>
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <Space wrap>
-          <strong>{selectedIds.length} selected</strong>
-          <Input placeholder="Group for all selected (optional)" style={{ width: 220 }} value={group} onChange={(e) => setGroup(e.target.value)} />
-          <Checkbox checked={scheduling} onChange={(e) => setScheduling(e.target.checked)}>
-            Set a schedule for all selected
-          </Checkbox>
-        </Space>
-        {scheduling ? (
-          <SchedulePolicyForm submitLabel={`Pair ${selectedIds.length} selected`} onSubmit={(policy) => handleSubmit(policy)} />
-        ) : (
-          <Button type="primary" loading={submitting} disabled={submitting || !selectedIds.length} onClick={() => handleSubmit(null)}>
-            Pair {selectedIds.length} selected
-          </Button>
-        )}
-      </Space>
+    <Card sx={{ mb: 1.5, bgcolor: 'var(--gk-card-bg)' }}>
+      <CardContent>
+        <Stack spacing={1.5} sx={{ width: '100%' }}>
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+            <Typography fontWeight={600}>{selectedIds.length} selected</Typography>
+            <TextField
+              size="small"
+              placeholder="Group for all selected (optional)"
+              sx={{ width: 220 }}
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+            />
+            <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+              <Checkbox checked={scheduling} onChange={(e) => setScheduling(e.target.checked)} size="small" />
+              Set a schedule for all selected
+            </label>
+          </Stack>
+          {scheduling ? (
+            <SchedulePolicyForm submitLabel={`Pair ${selectedIds.length} selected`} onSubmit={(policy) => handleSubmit(policy)} />
+          ) : (
+            <Button
+              variant="contained"
+              loading={submitting}
+              disabled={submitting || !selectedIds.length}
+              onClick={() => handleSubmit(null)}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Pair {selectedIds.length} selected
+            </Button>
+          )}
+        </Stack>
+      </CardContent>
     </Card>
   )
 }
@@ -142,75 +173,70 @@ export function DiscoverySection({ onPaired }) {
   }
 
   return (
-    <Card
-      title="Discovered on your network"
-      extra={<span className="muted">{status}</span>}
-    >
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Button type="primary" onClick={handleNewToken}>
-          New pairing token
-        </Button>
-      </Space>
+    <Card>
+      <CardHeader title="Discovered on your network" action={<span className="muted">{status}</span>} />
+      <CardContent sx={{ pt: 0 }}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1.5 }}>
+          <Button variant="contained" onClick={handleNewToken}>
+            New pairing token
+          </Button>
+        </Stack>
 
-      {tokenSchedule && (
-        <Card size="small" style={{ marginBottom: 12 }} title="Default schedule for this token's machines">
-          <SchedulePolicyForm
-            submitLabel="Create token"
-            onSubmit={async (policy) => {
-              await createToken(tokenSchedule.label, tokenSchedule.group, policy)
-              setTokenSchedule(null)
-            }}
-          />
-        </Card>
-      )}
-
-      {banner && (
-        <Alert
-          type="info"
-          closable
-          onClose={() => setBanner(null)}
-          style={{ marginBottom: 12 }}
-          message={
-            <span>
-              Pairing token (use once, on the new machine){banner.group ? ` — group "${banner.group}"` : ''}: <code>{banner.token}</code>
-              <br />
-              Run: <code>grid-node enroll --hub &lt;hub-url&gt; --token {banner.token} --name "{banner.label || 'my-machine'}"</code>
-            </span>
-          }
-        />
-      )}
-
-      {selected.size > 0 && (
-        <BulkPairBar
-          selectedIds={[...selected]}
-          codes={codes}
-          onCleared={() => setSelected(new Set())}
-          onPaired={handlePaired}
-        />
-      )}
-
-      {nodes.length ? (
-        <>
-          <Typography.Paragraph type="secondary" style={{ marginTop: -4, marginBottom: 8 }}>
-            Onboarding a whole lab? Check several machines below, enter each one's code, then pair them all at once.
-          </Typography.Paragraph>
-          <Space wrap size="middle" align="start">
-            {nodes.map((w) => (
-              <DiscoveryCard
-                key={w.discovery_id}
-                node={w}
-                checked={selected.has(w.discovery_id)}
-                onCheck={(checked) => toggleSelected(w.discovery_id, checked)}
-                code={codes[w.discovery_id] || ''}
-                onCodeChange={(code) => setCode(w.discovery_id, code)}
-                onPaired={handlePaired}
+        {tokenSchedule && (
+          <Card sx={{ mb: 1.5 }}>
+            <CardHeader title="Default schedule for this token's machines" />
+            <CardContent sx={{ pt: 0 }}>
+              <SchedulePolicyForm
+                submitLabel="Create token"
+                onSubmit={async (policy) => {
+                  await createToken(tokenSchedule.label, tokenSchedule.group, policy)
+                  setTokenSchedule(null)
+                }}
               />
-            ))}
-          </Space>
-        </>
-      ) : (
-        <p className="muted">No unpaired machines seen on the network right now.</p>
-      )}
+            </CardContent>
+          </Card>
+        )}
+
+        {banner && (
+          <Alert severity="info" onClose={() => setBanner(null)} sx={{ mb: 1.5 }}>
+            Pairing token (use once, on the new machine){banner.group ? ` — group "${banner.group}"` : ''}: <code>{banner.token}</code>
+            <br />
+            Run: <code>grid-node enroll --hub &lt;hub-url&gt; --token {banner.token} --name "{banner.label || 'my-machine'}"</code>
+          </Alert>
+        )}
+
+        {selected.size > 0 && (
+          <BulkPairBar
+            selectedIds={[...selected]}
+            codes={codes}
+            onCleared={() => setSelected(new Set())}
+            onPaired={handlePaired}
+          />
+        )}
+
+        {nodes.length ? (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: -0.5, mb: 1 }}>
+              Onboarding a whole lab? Check several machines below, enter each one's code, then pair them all at once.
+            </Typography>
+            <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="flex-start">
+              {nodes.map((w) => (
+                <DiscoveryCard
+                  key={w.discovery_id}
+                  node={w}
+                  checked={selected.has(w.discovery_id)}
+                  onCheck={(checked) => toggleSelected(w.discovery_id, checked)}
+                  code={codes[w.discovery_id] || ''}
+                  onCodeChange={(code) => setCode(w.discovery_id, code)}
+                  onPaired={handlePaired}
+                />
+              ))}
+            </Stack>
+          </>
+        ) : (
+          <p className="muted">No unpaired machines seen on the network right now.</p>
+        )}
+      </CardContent>
     </Card>
   )
 }

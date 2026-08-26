@@ -1,8 +1,8 @@
-/* Domain-specific styling antd doesn't provide -- ported from the
+/* Domain-specific styling MUI doesn't provide -- ported from the
    previous dashboard.css. Layout chrome (cards, buttons, forms, layout)
-   uses antd components + the theme tokens in main.jsx instead. Colors
+   uses MUI components + the theme tokens in theme.js instead. Colors
    here use the CSS variables from index.css (--gk-*) so this all stays
-   correct in both dark and light mode, not just antd's own components. */
+   correct in both dark and light mode, not just MUI's own components. */
 
 .muted {
   color: var(--gk-muted);
@@ -166,59 +166,61 @@
   gap: 1.5rem;
 }
 
-/* Every page is a lone <Tabs> direct child of .app-content (see App.jsx's
-   comment on tabBarExtraContent). Its nav bar is the page's de facto
-   header row, so it needs to match .sider-brand's height (64px) and sit
-   flush at the very top -- otherwise the divider line under the tabs
-   lands well below the sider brand's own divider instead of continuing
-   it in one straight line across the sider/content boundary. Bleeds to
-   the content edges (negative margin cancels .app-content's own side
-   padding) then re-adds it as internal padding, so the tab labels still
-   line up horizontally with the page content below. */
-.app-content > .ant-tabs > .ant-tabs-nav {
+/* Every page is a lone <PageTabBar> direct child of .app-content (see
+   App.jsx's comment on tabBarExtraContent). Its .page-tabbar row is the
+   page's de facto header row, so it needs to match .sider-brand's height
+   (64px) and sit flush at the very top -- otherwise the divider line
+   under the tabs lands well below the sider brand's own divider instead
+   of continuing it in one straight line across the sider/content
+   boundary. Bleeds to the content edges (negative margin cancels
+   .app-content's own side padding) then re-adds it as internal padding,
+   so the tab labels still line up horizontally with the page content
+   below. */
+.app-content .page-tabbar {
   height: 64px;
   margin: 0 -1.5rem 1.5rem;
   padding: 0 1.5rem;
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  border-bottom: 1px solid var(--gk-border);
 }
 
-/* Card's own head layout (antd, see node_modules/antd/es/card/style) puts
-   title + extra in one unwrapped flex row: title is flex:1 + ellipsis,
-   extra takes its natural width with margin-inline-start: auto and never
-   shrinks. On a narrow viewport a longish `extra` (e.g. a live "updated
-   3:45:12 PM" status string) eats nearly the whole row, so the title
-   ellipsizes down to almost nothing instead of just wrapping below it --
-   confirmed against antd's actual source, not guessed. Desktop is
-   untouched; this only changes anything once the row genuinely can't fit. */
+/* MUI's CardHeader (see @mui/material/CardHeader) puts title + action in
+   one unwrapped flex row by default: content is flex:1, action takes its
+   natural width and never shrinks. On a narrow viewport a longish action
+   (e.g. a live "updated 3:45:12 PM" status string) eats nearly the whole
+   row, so the title has no room left instead of just wrapping below it --
+   the same real bug this had with antd's equivalent layout, found via
+   Playwright at 375px, not guessed. Desktop is untouched; this only
+   changes anything once the row genuinely can't fit. */
 @media (max-width: 640px) {
   .app-content {
     padding: 0.75rem;
     gap: 1rem;
   }
-  /* .ant-tabs-nav's bleed-then-repad trick above assumes it's cancelling
+  /* .page-tabbar's bleed-then-repad trick above assumes it's cancelling
      .app-content's padding exactly (1.5rem both) -- once that padding
      shrinks to 0.75rem here, the un-adjusted -1.5rem margin still bleeds
-     the full 1.5rem, overflowing the viewport by the difference (confirmed
-     via a real 375px-viewport Playwright run: .ant-tabs-nav measured wider
-     than the viewport). Mirror the same reduced value on both sides so the
-     bleed-then-repad still cancels out at this breakpoint too. */
-  .app-content > .ant-tabs > .ant-tabs-nav {
+     the full 1.5rem, overflowing the viewport by the difference. Mirror
+     the same reduced value on both sides so the bleed-then-repad still
+     cancels out at this breakpoint too. */
+  .app-content .page-tabbar {
     margin: 0 -0.75rem 1rem;
     padding: 0 0.75rem;
   }
-  .ant-card-head-wrapper {
+  .MuiCardHeader-root {
     flex-wrap: wrap;
     row-gap: 2px;
   }
-  .ant-card-extra {
+  .MuiCardHeader-action {
     margin-inline-start: 0;
+    margin-top: 0;
   }
 }
 
 .sider-brand {
-  height: 64px; /* matches antd's default Layout.Header height, for alignment */
+  height: 64px; /* matches .page-tabbar's height, for alignment */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -234,35 +236,6 @@
 .sider-brand-collapsed {
   padding: 0 0.5rem;
   gap: 0.25rem;
-}
-
-/* Layout.Sider is `position: relative` unconditionally in antd (checked
-   node_modules/antd/es/layout/style/sider.js) -- its `breakpoint` prop
-   only auto-shrinks its width, it does NOT turn it into an overlay. Left
-   as the default, opening it on a narrow screen pushes page content
-   sideways off the viewport instead of floating over it (a real bug,
-   found via Playwright at 375px, not guessed). Below the breakpoint
-   matching MOBILE_BREAKPOINT_PX in App.jsx, make it a fixed full-height
-   overlay instead, with a backdrop (rendered by App.jsx) to dismiss it. */
-.sider-backdrop {
-  display: none;
-}
-@media (max-width: 767px) {
-  .ant-layout-sider {
-    position: fixed;
-    inset-inline-start: 0;
-    top: 0;
-    bottom: 0;
-    height: 100vh;
-    z-index: 100;
-  }
-  .sider-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 99;
-  }
 }
 
 .section-header {

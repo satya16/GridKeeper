@@ -1,36 +1,17 @@
-import { StrictMode, useEffect, useState } from 'react'
+import { StrictMode, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ConfigProvider, theme } from 'antd'
+import { CssBaseline, ThemeProvider } from '@mui/material'
+import { SnackbarProvider } from 'notistack'
+import '@fontsource/roboto/300.css'
+import '@fontsource/roboto/400.css'
+import '@fontsource/roboto/500.css'
+import '@fontsource/roboto/700.css'
 import App from './App.jsx'
+import { createAppTheme } from './theme.js'
+import { SnackbarUtilsConfigurator } from './snackbar.js'
 import './index.css'
 
 const THEME_STORAGE_KEY = 'gridkeeper-theme'
-
-// Same color tokens as index.css's --gk-* CSS variables, fed into antd's
-// algorithm so its own components (Button, Card, Select, Tabs, ...) match
-// rather than clashing with this app's custom CSS (App.css) and hand-
-// rolled chart SVGs (LineChart.jsx), which read those same variables.
-// Kept in two places (JS object here, CSS variables in index.css)
-// because antd's ConfigProvider needs real token values, not var()
-// references -- if the palette changes, update both.
-const THEME_TOKENS = {
-  dark: {
-    algorithm: theme.darkAlgorithm,
-    colorBgBase: '#0f1115',
-    colorBgContainer: '#171a21',
-    colorBorder: '#2a2e38',
-    colorText: '#e6e8eb',
-    colorTextSecondary: '#8a8f98',
-  },
-  light: {
-    algorithm: theme.defaultAlgorithm,
-    colorBgBase: '#f4f5f7',
-    colorBgContainer: '#ffffff',
-    colorBorder: '#e0e2e8',
-    colorText: '#1b1e25',
-    colorTextSecondary: '#666d7a',
-  },
-}
 
 function Root() {
   const [themeMode, setThemeMode] = useState(() => {
@@ -44,35 +25,16 @@ function Root() {
   }, [themeMode])
 
   const toggleTheme = () => setThemeMode((m) => (m === 'dark' ? 'light' : 'dark'))
-  const tokens = THEME_TOKENS[themeMode]
-
-  const gridKeeperTheme = {
-    algorithm: tokens.algorithm,
-    token: {
-      colorBgBase: tokens.colorBgBase,
-      colorBgContainer: tokens.colorBgContainer,
-      colorBorder: tokens.colorBorder,
-      // Left to the algorithm's default, this drifts from the explicit
-      // --gk-border color used by hand-rolled CSS (App.css's .sider-brand,
-      // in particular) -- e.g. Tabs' own divider line ends up a visibly
-      // different color than the sider's, breaking what should be one
-      // continuous line across the two panes.
-      colorBorderSecondary: tokens.colorBorder,
-      colorText: tokens.colorText,
-      colorTextSecondary: tokens.colorTextSecondary,
-      colorPrimary: '#4f8cff',
-      colorSuccess: '#3ecf8e',
-      colorWarning: '#f2a93c',
-      colorError: '#f2545b',
-      borderRadius: 8,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    },
-  }
+  const muiTheme = useMemo(() => createAppTheme(themeMode), [themeMode])
 
   return (
-    <ConfigProvider theme={gridKeeperTheme}>
-      <App themeMode={themeMode} onToggleTheme={toggleTheme} />
-    </ConfigProvider>
+    <ThemeProvider theme={muiTheme}>
+      <CssBaseline />
+      <SnackbarProvider maxSnack={4} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <SnackbarUtilsConfigurator />
+        <App themeMode={themeMode} onToggleTheme={toggleTheme} />
+      </SnackbarProvider>
+    </ThemeProvider>
   )
 }
 

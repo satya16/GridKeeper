@@ -1,4 +1,4 @@
-import { Tabs } from 'antd'
+import { PageTabBar } from '../components/PageTabBar.jsx'
 import { DiscoverySection } from '../components/DiscoverySection.jsx'
 import { FleetScheduleSection } from '../components/FleetScheduleSection.jsx'
 import { GroupActionsSection } from '../components/GroupActionsSection.jsx'
@@ -48,8 +48,8 @@ export function FleetPage({ nodes, groups, backends, perms, onChanged, tabBarExt
   ]
 
   // Puts the sider toggle, theme toggle, and logout button directly in
-  // the tab bar row itself (antd's own primitive for this -- Tabs'
+  // the tab bar row itself (PageTabBar's own primitive for this --
   // tabBarExtraContent, {left, right} -- rather than a separate header
   // bar above the tabs).
-  return <Tabs items={items} tabBarExtraContent={tabBarExtraContent} />
+  return <PageTabBar items={items} tabBarExtraContent={tabBarExtraContent} />
 }

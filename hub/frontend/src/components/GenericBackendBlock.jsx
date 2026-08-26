@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Button, Input, Select, Space, Typography, message } from 'antd'
+import { Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 
 // Fallback UI for any backend that isn't boinc/fah -- i.e. a third-party
 // grid_node.backends plugin (see node/grid_node/backends/base.py). Not as
@@ -11,7 +12,7 @@ import { api } from '../api.js'
 // registry (GET /api/backends, see hub/app/api/backends.py) -- reported by
 // a node's own status frame, not guessed.
 export function GenericBackendBlock({ nodeId, backendName, backendStatus, actions, canWrite, onChanged }) {
-  const [action, setAction] = useState()
+  const [action, setAction] = useState('')
   const [payloadText, setPayloadText] = useState('{}')
   const [running, setRunning] = useState(false)
 
@@ -21,33 +22,33 @@ export function GenericBackendBlock({ nodeId, backendName, backendStatus, action
     try {
       payload = payloadText.trim() ? JSON.parse(payloadText) : {}
     } catch {
-      message.error('Payload must be valid JSON (or left empty for {}).')
+      notify.error('Payload must be valid JSON (or left empty for {}).')
       return
     }
     setRunning(true)
     try {
       const result = await api.issueCommand(nodeId, backendName, action, payload)
       if (result.status !== 'ok') {
-        message.warning(`Command finished with status "${result.status}": ${JSON.stringify(result.result)}`)
+        notify.warning(`Command finished with status "${result.status}": ${JSON.stringify(result.result)}`)
       } else {
-        message.success(`${backendName}.${action} → ok`)
+        notify.success(`${backendName}.${action} → ok`)
       }
       onChanged()
     } catch (err) {
-      message.error(`Command failed: ${err.message}`)
+      notify.error(`Command failed: ${err.message}`)
     } finally {
       setRunning(false)
     }
   }
 
   return (
-    <div>
-      <Typography.Text type="secondary" style={{ textTransform: 'uppercase', fontSize: 12, letterSpacing: '0.04em' }}>
+    <Box>
+      <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
         {backendName}
-      </Typography.Text>
+      </Typography>
       <pre
         style={{
-          background: 'var(--gk-card)',
+          background: 'var(--gk-card-bg)',
           border: '1px solid var(--gk-border)',
           borderRadius: 6,
           padding: 8,
@@ -60,29 +61,37 @@ export function GenericBackendBlock({ nodeId, backendName, backendStatus, action
         {JSON.stringify(backendStatus, null, 2)}
       </pre>
       {canWrite && actions && actions.length > 0 && (
-        <Space direction="vertical" size="small" style={{ width: '100%', marginTop: 4 }}>
-          <Space wrap>
-            <Select
+        <Stack spacing={1} sx={{ width: '100%', mt: 0.5 }}>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <TextField
+              select
               size="small"
-              style={{ minWidth: 160 }}
-              placeholder="Action…"
+              label="Action"
               value={action}
-              onChange={setAction}
-              options={actions.map((a) => ({ value: a, label: a }))}
-            />
-            <Button size="small" type="primary" loading={running} disabled={running || !action} onClick={handleRun}>
+              onChange={(e) => setAction(e.target.value)}
+              sx={{ minWidth: 160 }}
+            >
+              {actions.map((a) => (
+                <MenuItem key={a} value={a}>
+                  {a}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button size="small" variant="contained" loading={running} disabled={running || !action} onClick={handleRun}>
               Run
             </Button>
-          </Space>
-          <Input.TextArea
+          </Stack>
+          <TextField
             size="small"
+            multiline
+            minRows={1}
+            maxRows={3}
             value={payloadText}
             onChange={(e) => setPayloadText(e.target.value)}
             placeholder="{}"
-            autoSize={{ minRows: 1, maxRows: 3 }}
           />
-        </Space>
+        </Stack>
       )}
-    </div>
+    </Box>
   )
 }

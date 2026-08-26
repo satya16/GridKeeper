@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Card, Checkbox, Space } from 'antd'
+import { Button, Card, CardContent, CardHeader, Checkbox, Stack } from '@mui/material'
 import { api } from '../api.js'
 import { usePolling } from '../usePolling.js'
 import { LineChart } from './LineChart.jsx'
@@ -67,49 +67,63 @@ export function MetricsSection() {
   ]
 
   return (
-    <Card title="Live metrics" extra={<span className="muted">{status}</span>}>
-      <div className="metrics-filter">
-        {ids.length ? (
-          <>
-            {ids.map((id) => {
-              const hasColor = colors.has(id)
-              return (
-                <label key={id} className={hasColor ? '' : 'disabled'} title={hasColor ? undefined : `Only ${MAX_CHART_SERIES} devices can be graphed at once -- deselect another to add this one`}>
-                  <Checkbox disabled={!hasColor} checked={hasColor && sel.has(id)} onChange={() => toggle(id)} />
-                  <span className="swatch" style={{ background: hasColor ? colors.get(id) : 'transparent' }} />
-                  <span>{metricsData[id].name || id}</span>
-                </label>
-              )
-            })}
-            <Space size="small" style={{ marginLeft: 'auto' }}>
-              <Button size="small" onClick={() => setSelection(new Set(ids.filter((id) => colors.has(id)).slice(0, MAX_CHART_SERIES)))}>
-                All
-              </Button>
-              <Button size="small" onClick={() => setSelection(new Set())}>
-                None
-              </Button>
-            </Space>
-          </>
-        ) : (
-          <p className="muted">No metrics reported yet.</p>
-        )}
-      </div>
+    <Card>
+      <CardHeader title="Live metrics" action={<span className="muted">{status}</span>} />
+      <CardContent sx={{ pt: 0 }}>
+        <div className="metrics-filter">
+          {ids.length ? (
+            <>
+              {ids.map((id) => {
+                const hasColor = colors.has(id)
+                return (
+                  <label
+                    key={id}
+                    className={hasColor ? '' : 'disabled'}
+                    title={hasColor ? undefined : `Only ${MAX_CHART_SERIES} devices can be graphed at once -- deselect another to add this one`}
+                  >
+                    <Checkbox disabled={!hasColor} checked={hasColor && sel.has(id)} onChange={() => toggle(id)} size="small" sx={{ p: 0 }} />
+                    <span className="swatch" style={{ background: hasColor ? colors.get(id) : 'transparent' }} />
+                    <span>{metricsData[id].name || id}</span>
+                  </label>
+                )
+              })}
+              <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
+                <Button size="small" variant="outlined" onClick={() => setSelection(new Set(ids.filter((id) => colors.has(id)).slice(0, MAX_CHART_SERIES)))}>
+                  All
+                </Button>
+                <Button size="small" variant="outlined" onClick={() => setSelection(new Set())}>
+                  None
+                </Button>
+              </Stack>
+            </>
+          ) : (
+            <p className="muted">No metrics reported yet.</p>
+          )}
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16 }}>
-        {chartSpecs.map((spec) => (
-          <Card key={spec.key} size="small" type="inner" className="chart-card" title={`${spec.title} (${spec.unit}) — last 30 min`}>
-            <LineChart
-              title={spec.title}
-              series={buildSeriesForMetric(metricsData, sel, colors, spec.field, windowStart)}
-              windowSeconds={METRICS_WINDOW_SECONDS}
-              yMin={spec.yMin}
-              yMax={spec.yMax}
-              unit={spec.unit}
-              unitShort={spec.unitShort}
-            />
-          </Card>
-        ))}
-      </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16 }}>
+          {chartSpecs.map((spec) => (
+            <Card key={spec.key} variant="outlined" className="chart-card">
+              <CardHeader
+                title={`${spec.title} (${spec.unit}) — last 30 min`}
+                slotProps={{ title: { variant: 'subtitle2' } }}
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <LineChart
+                  title={spec.title}
+                  series={buildSeriesForMetric(metricsData, sel, colors, spec.field, windowStart)}
+                  windowSeconds={METRICS_WINDOW_SECONDS}
+                  yMin={spec.yMin}
+                  yMax={spec.yMax}
+                  unit={spec.unit}
+                  unitShort={spec.unitShort}
+                />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </CardContent>
     </Card>
   )
 }

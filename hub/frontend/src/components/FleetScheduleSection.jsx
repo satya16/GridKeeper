@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Card, Select, Space, Typography, message } from 'antd'
+import { Card, CardContent, CardHeader, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 import { SchedulePolicyForm } from './SchedulePolicyForm.jsx'
 
 export function FleetScheduleSection({ groups, canApplyToAll, onApplied }) {
@@ -15,36 +16,38 @@ export function FleetScheduleSection({ groups, canApplyToAll, onApplied }) {
   const handleSubmit = async (policy) => {
     try {
       const result = await api.applySchedule(effectiveGroup, policy)
-      message.success(`Schedule applied to ${result.length} machine(s).`)
+      notify.success(`Schedule applied to ${result.length} machine(s).`)
       onApplied()
     } catch (err) {
-      message.error(`Failed to apply schedule: ${err.message}`)
+      notify.error(`Failed to apply schedule: ${err.message}`)
     }
   }
 
   return (
-    <Card title="Fleet schedule">
-      <Typography.Paragraph type="secondary" style={{ marginTop: -8, marginBottom: 12 }}>
-        Applies to a group, or every machine at once.
-      </Typography.Paragraph>
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <Space wrap>
-          Apply to
-          <Select
-            style={{ minWidth: 180 }}
-            value={effectiveGroup}
-            onChange={setGroup}
-            options={[
-              ...(canApplyToAll ? [{ value: '', label: 'All machines' }] : []),
-              ...groups.map((g) => ({ value: g, label: g })),
-            ]}
+    <Card>
+      <CardHeader title="Fleet schedule" />
+      <CardContent sx={{ pt: 0 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Applies to a group, or every machine at once.
+        </Typography>
+        <Stack spacing={1.5} sx={{ width: '100%' }}>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Typography variant="body2">Apply to</Typography>
+            <TextField select size="small" value={effectiveGroup} onChange={(e) => setGroup(e.target.value)} sx={{ minWidth: 180 }}>
+              {canApplyToAll && <MenuItem value="">All machines</MenuItem>}
+              {groups.map((g) => (
+                <MenuItem key={g} value={g}>
+                  {g}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+          <SchedulePolicyForm
+            submitLabel={effectiveGroup ? `Apply to "${effectiveGroup}"` : 'Apply to all machines'}
+            onSubmit={handleSubmit}
           />
-        </Space>
-        <SchedulePolicyForm
-          submitLabel={effectiveGroup ? `Apply to "${effectiveGroup}"` : 'Apply to all machines'}
-          onSubmit={handleSubmit}
-        />
-      </Space>
+        </Stack>
+      </CardContent>
     </Card>
   )
 }

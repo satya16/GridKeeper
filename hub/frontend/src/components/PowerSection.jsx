@@ -1,8 +1,28 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Checkbox, Input, InputNumber, Select, Space, Statistic, Table, Typography } from 'antd'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import DeleteIcon from '@mui/icons-material/Delete'
+import AddIcon from '@mui/icons-material/Add'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from '@mui/material'
 import { api } from '../api.js'
 import { usePolling } from '../usePolling.js'
+import { StatBlock } from './StatBlock.jsx'
 
 const POWER_REFRESH_INTERVAL_MS = 7000
 const COST_STORAGE_KEY = 'gridkeeper.costPerKwh'
@@ -167,128 +187,174 @@ export function PowerSection({ nodes }) {
   const whatIfProjections = projectFrom(whatIfTotalWatts, costPerKwh)
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Card title="Power calculator" extra={<span className="muted">{status}</span>}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Space align="center" wrap>
-            <span>Cost per kWh</span>
-            <Select value={currencyCode} onChange={setCurrencyCode} options={CURRENCY_OPTIONS} style={{ width: 220 }} />
-            {currencyCode === OTHER_CURRENCY && (
-              <Input
-                value={customSymbol}
-                onChange={(e) => setCustomSymbol(e.target.value)}
-                placeholder="Symbol, e.g. kr"
-                style={{ width: 100 }}
+    <Stack spacing={3} sx={{ width: '100%' }}>
+      <Card>
+        <CardHeader title="Power calculator" action={<span className="muted">{status}</span>} />
+        <CardContent sx={{ pt: 0 }}>
+          <Stack spacing={2} sx={{ width: '100%' }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+              <Typography variant="body2">Cost per kWh</Typography>
+              <TextField select size="small" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} sx={{ width: 260 }}>
+                {CURRENCY_OPTIONS.map((o) => (
+                  <MenuItem key={o.value} value={o.value}>
+                    {o.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              {currencyCode === OTHER_CURRENCY && (
+                <TextField
+                  size="small"
+                  value={customSymbol}
+                  onChange={(e) => setCustomSymbol(e.target.value)}
+                  placeholder="Symbol, e.g. kr"
+                  sx={{ width: 100 }}
+                />
+              )}
+              <TextField
+                type="number"
+                size="small"
+                slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                value={costPerKwh}
+                onChange={(e) => setCostPerKwh(Number(e.target.value) || 0)}
+                sx={{ width: 140 }}
               />
-            )}
-            <InputNumber
-              min={0}
-              step={0.01}
-              precision={2}
-              prefix={currencySymbol}
-              value={costPerKwh}
-              onChange={(v) => setCostPerKwh(typeof v === 'number' ? v : 0)}
+            </Stack>
+
+            <StatBlock
+              title={`Current estimated draw (${rows.length} online node${rows.length === 1 ? '' : 's'} reporting)`}
+              value={totalWatts}
+              suffix=" W"
+              precision={1}
             />
-          </Space>
 
-          <Statistic
-            title={`Current estimated draw (${rows.length} online node${rows.length === 1 ? '' : 's'} reporting)`}
-            value={totalWatts}
-            suffix="W"
-            precision={1}
-          />
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
-            {projections.map((p) => (
-              <Card key={p.key} size="small" type="inner" title={p.label}>
-                <Statistic value={p.cost} prefix={currencySymbol} precision={2} />
-                <div className="muted">{p.kwh.toFixed(2)} kWh</div>
-              </Card>
-            ))}
-          </div>
-
-          <Typography.Paragraph className="muted" style={{ marginBottom: 0 }}>
-            Rough whole-system estimate from CPU load only (each node's configured idle/max wattage, linearly scaled
-            by cpu_percent) -- not a measured reading. Real draw (GPU, disk, PSU losses) will differ; tune a node's{' '}
-            <code>idle_watts</code>/<code>max_watts</code> in its config for a better fit.
-          </Typography.Paragraph>
-        </Space>
-      </Card>
-
-      <Card title="Per-node breakdown" size="small">
-        {rows.length ? (
-          <Table
-            size="small"
-            pagination={false}
-            dataSource={rows}
-            columns={[
-              { title: 'Node', dataIndex: 'name', key: 'name' },
-              { title: 'Estimated draw', dataIndex: 'watts', key: 'watts', render: (w) => `${w.toFixed(1)} W` },
-            ]}
-          />
-        ) : (
-          <p className="muted">No online nodes reporting power estimates yet.</p>
-        )}
-      </Card>
-
-      <Card title="What-if scenario">
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Typography.Paragraph className="muted" style={{ marginBottom: 0 }}>
-            Uncheck a real node to see the projection without it, or add a hypothetical machine with a flat wattage
-            guess -- it has no live CPU usage to scale from, so unlike real nodes above this is just a number you
-            supply (e.g. from the machine's PSU rating).
-          </Typography.Paragraph>
-
-          {rows.length > 0 && (
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              <Typography.Text strong>Real nodes</Typography.Text>
-              {rows.map((r) => (
-                <div key={r.key}>
-                  <Checkbox checked={!excludedNodeIds.has(r.key)} onChange={() => toggleNodeExcluded(r.key)}>
-                    {r.name} <span className="muted">({r.watts.toFixed(1)} W)</span>
-                  </Checkbox>
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+              {projections.map((p) => (
+                <Card key={p.key} variant="outlined">
+                  <CardHeader title={p.label} slotProps={{ title: { variant: 'subtitle2' } }} sx={{ pb: 0.5 }} />
+                  <CardContent sx={{ pt: 0 }}>
+                    <StatBlock value={p.cost} prefix={currencySymbol} precision={2} />
+                    <div className="muted">{p.kwh.toFixed(2)} kWh</div>
+                  </CardContent>
+                </Card>
               ))}
-            </Space>
-          )}
+            </div>
 
-          <Space direction="vertical" size="small" style={{ width: '100%' }}>
-            <Typography.Text strong>Hypothetical machines</Typography.Text>
-            {whatIfRows.map((r) => (
-              <Space key={r.id} align="center">
-                <Input
-                  value={r.name}
-                  onChange={(e) => updateWhatIfRow(r.id, { name: e.target.value })}
-                  style={{ width: 200 }}
-                  placeholder="Machine name"
-                />
-                <InputNumber
-                  min={0}
-                  step={5}
-                  suffix="W"
-                  value={r.watts}
-                  onChange={(v) => updateWhatIfRow(r.id, { watts: typeof v === 'number' ? v : 0 })}
-                />
-                <Button icon={<DeleteOutlined />} onClick={() => removeWhatIfRow(r.id)} aria-label="Remove machine" />
-              </Space>
-            ))}
-            <Button icon={<PlusOutlined />} onClick={addWhatIfRow}>
-              Add machine
-            </Button>
-          </Space>
-
-          <Statistic title="What-if total draw" value={whatIfTotalWatts} suffix="W" precision={1} />
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
-            {whatIfProjections.map((p) => (
-              <Card key={p.key} size="small" type="inner" title={p.label}>
-                <Statistic value={p.cost} prefix={currencySymbol} precision={2} />
-                <div className="muted">{p.kwh.toFixed(2)} kWh</div>
-              </Card>
-            ))}
-          </div>
-        </Space>
+            <Typography variant="body2" color="text.secondary">
+              Rough whole-system estimate from CPU load only (each node's configured idle/max wattage, linearly scaled
+              by cpu_percent) -- not a measured reading. Real draw (GPU, disk, PSU losses) will differ; tune a node's{' '}
+              <code>idle_watts</code>/<code>max_watts</code> in its config for a better fit.
+            </Typography>
+          </Stack>
+        </CardContent>
       </Card>
-    </Space>
+
+      <Card>
+        <CardHeader title="Per-node breakdown" />
+        <CardContent sx={{ pt: 0 }}>
+          {rows.length ? (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Node</TableCell>
+                    <TableCell>Estimated draw</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((r) => (
+                    <TableRow key={r.key}>
+                      <TableCell>{r.name}</TableCell>
+                      <TableCell>{r.watts.toFixed(1)} W</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <p className="muted">No online nodes reporting power estimates yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader title="What-if scenario" />
+        <CardContent sx={{ pt: 0 }}>
+          <Stack spacing={2} sx={{ width: '100%' }}>
+            <Typography variant="body2" color="text.secondary">
+              Uncheck a real node to see the projection without it, or add a hypothetical machine with a flat wattage
+              guess -- it has no live CPU usage to scale from, so unlike real nodes above this is just a number you
+              supply (e.g. from the machine's PSU rating).
+            </Typography>
+
+            {rows.length > 0 && (
+              <Stack spacing={0.5} sx={{ width: '100%' }}>
+                <Typography variant="body2" fontWeight={600}>
+                  Real nodes
+                </Typography>
+                {rows.map((r) => (
+                  <FormControlLabel
+                    key={r.key}
+                    control={<Checkbox checked={!excludedNodeIds.has(r.key)} onChange={() => toggleNodeExcluded(r.key)} size="small" />}
+                    label={
+                      <>
+                        {r.name} <span className="muted">({r.watts.toFixed(1)} W)</span>
+                      </>
+                    }
+                  />
+                ))}
+              </Stack>
+            )}
+
+            <Stack spacing={1} sx={{ width: '100%' }}>
+              <Typography variant="body2" fontWeight={600}>
+                Hypothetical machines
+              </Typography>
+              {whatIfRows.map((r) => (
+                <Stack key={r.id} direction="row" spacing={1.5} alignItems="center">
+                  <TextField
+                    size="small"
+                    value={r.name}
+                    onChange={(e) => updateWhatIfRow(r.id, { name: e.target.value })}
+                    sx={{ width: 200 }}
+                    placeholder="Machine name"
+                  />
+                  <TextField
+                    type="number"
+                    size="small"
+                    slotProps={{ htmlInput: { min: 0, step: 5 } }}
+                    value={r.watts}
+                    onChange={(e) => updateWhatIfRow(r.id, { watts: Number(e.target.value) || 0 })}
+                    sx={{ width: 120 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    W
+                  </Typography>
+                  <IconButton onClick={() => removeWhatIfRow(r.id)} aria-label="Remove machine" size="small">
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              ))}
+              <Button startIcon={<AddIcon />} variant="outlined" onClick={addWhatIfRow} sx={{ alignSelf: 'flex-start' }}>
+                Add machine
+              </Button>
+            </Stack>
+
+            <StatBlock title="What-if total draw" value={whatIfTotalWatts} suffix=" W" precision={1} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+              {whatIfProjections.map((p) => (
+                <Card key={p.key} variant="outlined">
+                  <CardHeader title={p.label} slotProps={{ title: { variant: 'subtitle2' } }} sx={{ pb: 0.5 }} />
+                  <CardContent sx={{ pt: 0 }}>
+                    <StatBlock value={p.cost} prefix={currencySymbol} precision={2} />
+                    <div className="muted">{p.kwh.toFixed(2)} kWh</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
   )
 }

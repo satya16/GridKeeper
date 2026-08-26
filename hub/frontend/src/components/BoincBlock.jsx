@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { Button, Collapse, Form, Input, Space, Typography, message } from 'antd'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Stack, TextField, Typography } from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 
 function pct(fraction) {
   return `${Math.round((fraction || 0) * 100)}%`
 }
 
 export function BoincBlock({ nodeId, boinc, canWrite, onChanged }) {
-  const [attachForm] = Form.useForm()
+  const [projectUrl, setProjectUrl] = useState('')
+  const [accountKey, setAccountKey] = useState('')
   // Command dispatch already blocks until the node's real result comes
   // back (or a 15s timeout) -- these track "is that wait still in flight"
   // so buttons can disable/spin rather than let a fast double-click (e.g.
@@ -30,10 +33,10 @@ export function BoincBlock({ nodeId, boinc, canWrite, onChanged }) {
   const run = async (action, payload) => {
     try {
       const result = await api.issueCommand(nodeId, 'boinc', action, payload)
-      if (result.status !== 'ok') message.warning(`Command finished with status "${result.status}": ${JSON.stringify(result.result)}`)
+      if (result.status !== 'ok') notify.warning(`Command finished with status "${result.status}": ${JSON.stringify(result.result)}`)
       onChanged()
     } catch (err) {
-      message.error(`Command failed: ${err.message}`)
+      notify.error(`Command failed: ${err.message}`)
     }
   }
 
@@ -64,25 +67,30 @@ export function BoincBlock({ nodeId, boinc, canWrite, onChanged }) {
     runForProject('detach_project', projectUrl)
   }
 
-  const handleAttach = async (values) => {
+  const handleAttach = async (e) => {
+    e.preventDefault()
+    if (!projectUrl.trim() || !accountKey.trim()) return
     setAttaching(true)
     try {
-      await run('attach_project', { project_url: values.project_url.trim(), account_key: values.account_key.trim() })
-      attachForm.resetFields()
+      await run('attach_project', { project_url: projectUrl.trim(), account_key: accountKey.trim() })
+      setProjectUrl('')
+      setAccountKey('')
     } finally {
       setAttaching(false)
     }
   }
 
   return (
-    <div>
-      <Typography.Text type="secondary" style={{ textTransform: 'uppercase', fontSize: 12, letterSpacing: '0.04em' }}>
+    <Box>
+      <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
         BOINC — run mode: {runMode}
-      </Typography.Text>
+      </Typography>
       {suspendReason && (
-        <div>
-          <Typography.Text type="warning">CPU suspended: {suspendReason}</Typography.Text>
-        </div>
+        <Box>
+          <Typography variant="body2" color="warning.main">
+            CPU suspended: {suspendReason}
+          </Typography>
+        </Box>
       )}
 
       {projects.length ? (
@@ -95,19 +103,20 @@ export function BoincBlock({ nodeId, boinc, canWrite, onChanged }) {
                 {p.suspended ? ' (suspended)' : ''}
               </span>
               {canWrite && (
-                <Space size="small" wrap>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
                   <Button
                     size="small"
+                    variant="outlined"
                     loading={isPending}
                     disabled={isPending}
                     onClick={() => runForProject(p.suspended ? 'resume_project' : 'suspend_project', p.url)}
                   >
                     {p.suspended ? 'Start' : 'Stop'}
                   </Button>
-                  <Button size="small" danger loading={isPending} disabled={isPending} onClick={() => detach(p.url)}>
+                  <Button size="small" variant="outlined" color="error" loading={isPending} disabled={isPending} onClick={() => detach(p.url)}>
                     Detach
                   </Button>
-                </Space>
+                </Stack>
               )}
             </div>
           )
@@ -130,43 +139,46 @@ export function BoincBlock({ nodeId, boinc, canWrite, onChanged }) {
 
       {canWrite && (
         <>
-          <Space style={{ marginTop: 8 }} wrap>
-            <Button loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('resume_all')}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+            <Button size="small" variant="outlined" loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('resume_all')}>
               Resume all
             </Button>
-            <Button danger loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('suspend_all')}>
+            <Button size="small" variant="outlined" color="error" loading={pendingAll} disabled={pendingAll} onClick={() => runForAll('suspend_all')}>
               Suspend all
             </Button>
-          </Space>
+          </Stack>
 
-          <Collapse
-            ghost
-            size="small"
-            style={{ marginTop: 8 }}
-            items={[
-              {
-                key: 'attach',
-                label: 'Attach a project…',
-                children: (
-                  <Form form={attachForm} layout="vertical" onFinish={handleAttach} size="small">
-                    <Form.Item name="project_url" label="Project URL" rules={[{ required: true }]}>
-                      <Input placeholder="https://example.org/project/" />
-                    </Form.Item>
-                    <Form.Item name="account_key" label="Account key" rules={[{ required: true }]}>
-                      <Input.Password placeholder="from the project's “your account” page" />
-                    </Form.Item>
-                    <Form.Item>
-                      <Button type="primary" htmlType="submit" loading={attaching} disabled={attaching}>
-                        Attach
-                      </Button>
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-            ]}
-          />
+          <Accordion disableGutters elevation={0} square sx={{ mt: 1, bgcolor: 'transparent', '&:before': { display: 'none' } }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 0, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+              <Typography variant="body2">Attach a project…</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              <Stack component="form" onSubmit={handleAttach} spacing={1.5}>
+                <TextField
+                  size="small"
+                  label="Project URL"
+                  required
+                  placeholder="https://example.org/project/"
+                  value={projectUrl}
+                  onChange={(e) => setProjectUrl(e.target.value)}
+                />
+                <TextField
+                  size="small"
+                  type="password"
+                  label="Account key"
+                  required
+                  placeholder="from the project's “your account” page"
+                  value={accountKey}
+                  onChange={(e) => setAccountKey(e.target.value)}
+                />
+                <Button type="submit" variant="contained" size="small" loading={attaching} disabled={attaching} sx={{ alignSelf: 'flex-start' }}>
+                  Attach
+                </Button>
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
         </>
       )}
-    </div>
+    </Box>
   )
 }

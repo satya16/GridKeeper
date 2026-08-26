@@ -1,4 +1,4 @@
-import { Tabs } from 'antd'
+import { PageTabBar } from '../components/PageTabBar.jsx'
 import { UsersSection } from '../components/UsersSection.jsx'
 import { AuditLogSection } from '../components/AuditLogSection.jsx'
 
@@ -11,5 +11,5 @@ export function AdminConsolePage({ nodes, groups, tabBarExtraContent }) {
     { key: 'users', label: 'Users', children: <UsersSection groups={groups} nodes={nodes} /> },
     { key: 'audit-log', label: 'Audit Log', children: <AuditLogSection /> },
   ]
-  return <Tabs items={items} tabBarExtraContent={tabBarExtraContent} />
+  return <PageTabBar items={items} tabBarExtraContent={tabBarExtraContent} />
 }

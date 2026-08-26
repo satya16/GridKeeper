@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Button, Card, Form, Input, Select, Space, Typography, message } from 'antd'
+import { Box, Button, Card, CardContent, CardHeader, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 import { usePolling } from '../usePolling.js'
 
 const CREDENTIALS_REFRESH_INTERVAL_MS = 10000
@@ -16,39 +17,31 @@ function summarizeBulkResults(results) {
 }
 
 function CredentialRow({ credential, nodes, groups, perms, onChanged, onNodeChanged }) {
-  const [target, setTarget] = useState()
+  const [target, setTarget] = useState('')
   const [applying, setApplying] = useState(false)
-
-  const targetOptions = [
-    ...(perms.canApplyCredentialToAll ? [{ label: 'All machines', options: [{ value: 'all', label: 'All machines' }] }] : []),
-    ...(perms.canApplyCredentialToGroup && groups.length
-      ? [{ label: 'Whole group', options: groups.map((g) => ({ value: `group:${g}`, label: g })) }]
-      : []),
-    { label: 'Just one machine', options: nodes.map((w) => ({ value: `node:${w.id}`, label: w.name })) },
-  ]
 
   const handleApply = async () => {
     if (!target) return
     setApplying(true)
     try {
       if (target === 'all') {
-        message.info(summarizeBulkResults(await api.applyCredentialToAll(credential.id)))
+        notify.info(summarizeBulkResults(await api.applyCredentialToAll(credential.id)))
       } else if (target.startsWith('group:')) {
         const group = target.slice('group:'.length)
-        message.info(summarizeBulkResults(await api.applyCredentialToGroup(credential.id, group)))
+        notify.info(summarizeBulkResults(await api.applyCredentialToGroup(credential.id, group)))
       } else {
         const nodeId = target.slice('node:'.length)
         const result = await api.applyCredential(credential.id, nodeId)
         if (result.status !== 'ok') {
-          message.warning(`Apply finished with status "${result.status}": ${JSON.stringify(result.result)}`)
+          notify.warning(`Apply finished with status "${result.status}": ${JSON.stringify(result.result)}`)
         } else {
-          message.success(`Applied '${credential.name}' to the selected machine.`)
+          notify.success(`Applied '${credential.name}' to the selected machine.`)
         }
       }
       onChanged()
       onNodeChanged()
     } catch (err) {
-      message.error(`Apply failed: ${err.message}`)
+      notify.error(`Apply failed: ${err.message}`)
     } finally {
       setApplying(false)
     }
@@ -60,7 +53,7 @@ function CredentialRow({ credential, nodes, groups, perms, onChanged, onNodeChan
       await api.deleteCredential(credential.id)
       onChanged()
     } catch (err) {
-      message.error(`Delete failed: ${err.message}`)
+      notify.error(`Delete failed: ${err.message}`)
     }
   }
 
@@ -78,112 +71,154 @@ function CredentialRow({ credential, nodes, groups, perms, onChanged, onNodeChan
           {credential.last_used_at ? `last applied ${new Date(credential.last_used_at).toLocaleString()}` : 'never applied'}
         </span>
       </span>
-      <Space size="small" wrap>
+      <Stack direction="row" spacing={1} flexWrap="wrap">
         {perms.canApplyCredential && (
           <>
-            <Select
-              size="small"
-              style={{ minWidth: 200 }}
-              placeholder="Apply to…"
-              value={target}
-              onChange={setTarget}
-              options={targetOptions}
-            />
-            <Button size="small" type="primary" loading={applying} disabled={applying || !target} onClick={handleApply}>
+            <TextField select size="small" value={target} onChange={(e) => setTarget(e.target.value)} sx={{ minWidth: 200 }} displayEmpty>
+              <MenuItem value="">
+                <em>Apply to…</em>
+              </MenuItem>
+              {perms.canApplyCredentialToAll && <MenuItem value="all">All machines</MenuItem>}
+              {perms.canApplyCredentialToGroup && groups.map((g) => <MenuItem key={g} value={`group:${g}`}>{g}</MenuItem>)}
+              {nodes.map((n) => (
+                <MenuItem key={n.id} value={`node:${n.id}`}>
+                  {n.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button size="small" variant="contained" loading={applying} disabled={applying || !target} onClick={handleApply}>
               Apply
             </Button>
           </>
         )}
         {perms.canManageCredentials && (
-          <Button size="small" danger onClick={handleDelete}>
+          <Button size="small" variant="outlined" color="error" onClick={handleDelete}>
             Delete
           </Button>
         )}
-      </Space>
+      </Stack>
     </div>
   )
 }
 
 export function CredentialsSection({ nodes, groups, backends, perms, onNodeChanged }) {
   const { data: credentials, status, refresh } = usePolling(api.listCredentials, CREDENTIALS_REFRESH_INTERVAL_MS)
-  const [form] = Form.useForm()
+  const [name, setName] = useState('')
+  const [backendName, setBackendName] = useState('')
+  const [staticFieldValues, setStaticFieldValues] = useState({})
+  const [secret, setSecret] = useState('')
   // Only backends that declared a CREDENTIAL_ACTION (see
   // node/grid_node/backends/base.py) support a saved credential -- e.g.
   // fah.py deliberately doesn't (its passkey isn't shaped like a reusable
   // project account key), same boundary this had before it was
   // generalized, now driven by the registry instead of hardcoded here.
   const credentialBackends = (backends || []).filter((b) => b.credential_action)
-  const selectedBackendName = Form.useWatch('backend', form)
-  const selectedBackend = credentialBackends.find((b) => b.name === selectedBackendName)
+  const selectedBackend = credentialBackends.find((b) => b.name === backendName)
   const staticFieldNames = selectedBackend?.credential_action?.static_fields || []
   const secretFieldLabel = selectedBackend?.credential_action?.key_field || 'secret'
 
-  const handleCreate = async (values) => {
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    if (!name.trim() || !backendName || !secret.trim()) return
     try {
-      const staticFields = Object.fromEntries(staticFieldNames.map((f) => [f, (values[f] || '').trim()]))
-      await api.createCredential(values.name.trim(), values.backend, staticFields, values.secret.trim())
-      message.success(`Saved '${values.name.trim()}'.`)
-      form.resetFields()
+      const staticFields = Object.fromEntries(staticFieldNames.map((f) => [f, (staticFieldValues[f] || '').trim()]))
+      await api.createCredential(name.trim(), backendName, staticFields, secret.trim())
+      notify.success(`Saved '${name.trim()}'.`)
+      setName('')
+      setBackendName('')
+      setStaticFieldValues({})
+      setSecret('')
       refresh()
     } catch (err) {
-      message.error(`Save failed: ${err.message}`)
+      notify.error(`Save failed: ${err.message}`)
     }
   }
 
   return (
-    <Card
-      title="Saved credentials"
-      extra={<span className="muted">{status}</span>}
-    >
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-        Save a project credential once, then apply it to any machine below without pasting it into that machine's
-        attach form each time.
-      </Typography.Paragraph>
+    <Card>
+      <CardHeader title="Saved credentials" action={<span className="muted">{status}</span>} />
+      <CardContent sx={{ pt: 0 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Save a project credential once, then apply it to any machine below without pasting it into that machine's
+          attach form each time.
+        </Typography>
 
-      {credentials && credentials.length ? (
-        credentials.map((c) => (
-          <CredentialRow
-            key={c.id}
-            credential={c}
-            nodes={nodes}
-            groups={groups}
-            perms={perms}
-            onChanged={refresh}
-            onNodeChanged={onNodeChanged}
-          />
-        ))
-      ) : (
-        <p className="task-row muted">No saved credentials yet.</p>
-      )}
-
-      {perms.canManageCredentials && (
-        <Form form={form} layout="inline" onFinish={handleCreate} style={{ marginTop: 12 }}>
-          <Form.Item name="name" rules={[{ required: true }]}>
-            <Input placeholder="Name (e.g. School WCG account)" style={{ width: 220 }} />
-          </Form.Item>
-          <Form.Item name="backend" rules={[{ required: true }]}>
-            <Select
-              placeholder="Backend"
-              style={{ width: 160 }}
-              options={credentialBackends.map((b) => ({ value: b.name, label: b.label || b.name }))}
-              onChange={() => form.setFieldsValue(Object.fromEntries(staticFieldNames.map((f) => [f, undefined])))}
+        {credentials && credentials.length ? (
+          credentials.map((c) => (
+            <CredentialRow
+              key={c.id}
+              credential={c}
+              nodes={nodes}
+              groups={groups}
+              perms={perms}
+              onChanged={refresh}
+              onNodeChanged={onNodeChanged}
             />
-          </Form.Item>
-          {staticFieldNames.map((fieldName) => (
-            <Form.Item key={fieldName} name={fieldName} rules={[{ required: true }]}>
-              <Input placeholder={fieldName} style={{ width: 200 }} />
-            </Form.Item>
-          ))}
-          <Form.Item name="secret" rules={[{ required: true }]}>
-            <Input.Password placeholder={secretFieldLabel} style={{ width: 200 }} />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" disabled={!selectedBackendName}>
-              Save
-            </Button>
-          </Form.Item>
-        </Form>
-      )}
+          ))
+        ) : (
+          <p className="task-row muted">No saved credentials yet.</p>
+        )}
+
+        {perms.canManageCredentials && (
+          <Box component="form" onSubmit={handleCreate} sx={{ mt: 1.5 }}>
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-start" useFlexGap>
+              <TextField
+                size="small"
+                placeholder="Name (e.g. School WCG account)"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                sx={{ width: 220 }}
+              />
+              <TextField
+                select
+                size="small"
+                label="Backend"
+                required
+                value={backendName}
+                onChange={(e) => {
+                  setBackendName(e.target.value)
+                  setStaticFieldValues({})
+                }}
+                sx={{ width: 160 }}
+                displayEmpty
+              >
+                <MenuItem value="">
+                  <em>Backend</em>
+                </MenuItem>
+                {credentialBackends.map((b) => (
+                  <MenuItem key={b.name} value={b.name}>
+                    {b.label || b.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              {staticFieldNames.map((fieldName) => (
+                <TextField
+                  key={fieldName}
+                  size="small"
+                  placeholder={fieldName}
+                  required
+                  value={staticFieldValues[fieldName] || ''}
+                  onChange={(e) => setStaticFieldValues((prev) => ({ ...prev, [fieldName]: e.target.value }))}
+                  sx={{ width: 200 }}
+                />
+              ))}
+              <TextField
+                type="password"
+                size="small"
+                placeholder={secretFieldLabel}
+                required
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                sx={{ width: 200 }}
+              />
+              <Button type="submit" variant="contained" disabled={!backendName}>
+                Save
+              </Button>
+            </Stack>
+          </Box>
+        )}
+      </CardContent>
     </Card>
   )
 }

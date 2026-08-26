@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Button, Card, Input, Select, Space, Typography, message } from 'antd'
+import { Button, Card, CardContent, CardHeader, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 
 // B2: the group-scoped counterpart to FleetScheduleSection -- "suspend all
 // of Lab 1" without opening each node card. Same effectiveGroup pattern:
@@ -8,8 +9,8 @@ import { api } from '../api.js'
 // first group rather than a value they can't actually submit.
 export function GroupActionsSection({ groups, backends, canIssueToAll, onIssued }) {
   const [group, setGroup] = useState('')
-  const [backendName, setBackendName] = useState()
-  const [action, setAction] = useState()
+  const [backendName, setBackendName] = useState('')
+  const [action, setAction] = useState('')
   const [payloadText, setPayloadText] = useState('{}')
   const [running, setRunning] = useState(false)
 
@@ -22,7 +23,7 @@ export function GroupActionsSection({ groups, backends, canIssueToAll, onIssued 
     try {
       payload = payloadText.trim() ? JSON.parse(payloadText) : {}
     } catch {
-      message.error('Payload must be valid JSON (or left empty for {}).')
+      notify.error('Payload must be valid JSON (or left empty for {}).')
       return
     }
     setRunning(true)
@@ -32,62 +33,82 @@ export function GroupActionsSection({ groups, backends, canIssueToAll, onIssued 
         : await api.issueCommandToAll(backendName, action, payload)
       const ok = results.filter((r) => r.status === 'ok').length
       const skipped = results.filter((r) => r.status === 'skipped').length
-      message.info(`${backendName}.${action}: ok on ${ok}/${results.length} machine(s)${skipped ? `, ${skipped} offline (skipped)` : ''}`)
+      notify.info(`${backendName}.${action}: ok on ${ok}/${results.length} machine(s)${skipped ? `, ${skipped} offline (skipped)` : ''}`)
       onIssued()
     } catch (err) {
-      message.error(`Command failed: ${err.message}`)
+      notify.error(`Command failed: ${err.message}`)
     } finally {
       setRunning(false)
     }
   }
 
   return (
-    <Card title="Group actions" style={{ marginTop: 16 }}>
-      <Typography.Paragraph type="secondary" style={{ marginTop: -8, marginBottom: 12 }}>
-        Run one command against every machine in a group (or the whole fleet) at once -- offline machines are skipped,
-        not failed.
-      </Typography.Paragraph>
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <Space wrap>
-          Target
-          <Select
-            style={{ minWidth: 180 }}
-            value={effectiveGroup}
-            onChange={setGroup}
-            options={[...(canIssueToAll ? [{ value: '', label: 'All machines' }] : []), ...groups.map((g) => ({ value: g, label: g }))]}
+    <Card sx={{ mt: 2 }}>
+      <CardHeader title="Group actions" />
+      <CardContent sx={{ pt: 0 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Run one command against every machine in a group (or the whole fleet) at once -- offline machines are skipped,
+          not failed.
+        </Typography>
+        <Stack spacing={1.5} sx={{ width: '100%' }}>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Typography variant="body2">Target</Typography>
+            <TextField select size="small" value={effectiveGroup} onChange={(e) => setGroup(e.target.value)} sx={{ minWidth: 180 }}>
+              {canIssueToAll && <MenuItem value="">All machines</MenuItem>}
+              {groups.map((g) => (
+                <MenuItem key={g} value={g}>
+                  {g}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Typography variant="body2">Backend</Typography>
+            <TextField
+              select
+              size="small"
+              value={backendName}
+              onChange={(e) => {
+                setBackendName(e.target.value)
+                setAction('')
+              }}
+              sx={{ minWidth: 160 }}
+            >
+              {backends.map((b) => (
+                <MenuItem key={b.name} value={b.name}>
+                  {b.label || b.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Typography variant="body2">Action</Typography>
+            <TextField
+              select
+              size="small"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              disabled={!backend}
+              sx={{ minWidth: 160 }}
+            >
+              {(backend?.actions || []).map((a) => (
+                <MenuItem key={a} value={a}>
+                  {a}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+          <TextField
+            size="small"
+            multiline
+            minRows={1}
+            maxRows={3}
+            value={payloadText}
+            onChange={(e) => setPayloadText(e.target.value)}
+            placeholder="{}"
+            sx={{ maxWidth: 400 }}
           />
-          Backend
-          <Select
-            style={{ minWidth: 160 }}
-            placeholder="Backend…"
-            value={backendName}
-            onChange={(v) => {
-              setBackendName(v)
-              setAction(undefined)
-            }}
-            options={backends.map((b) => ({ value: b.name, label: b.label || b.name }))}
-          />
-          Action
-          <Select
-            style={{ minWidth: 160 }}
-            placeholder="Action…"
-            value={action}
-            onChange={setAction}
-            disabled={!backend}
-            options={(backend?.actions || []).map((a) => ({ value: a, label: a }))}
-          />
-        </Space>
-        <Input.TextArea
-          value={payloadText}
-          onChange={(e) => setPayloadText(e.target.value)}
-          placeholder="{}"
-          autoSize={{ minRows: 1, maxRows: 3 }}
-          style={{ maxWidth: 400 }}
-        />
-        <Button type="primary" loading={running} disabled={running || !backendName || !action} onClick={handleRun}>
-          {effectiveGroup ? `Run on "${effectiveGroup}"` : 'Run on all machines'}
-        </Button>
-      </Space>
+          <Button variant="contained" loading={running} disabled={running || !backendName || !action} onClick={handleRun} sx={{ alignSelf: 'flex-start' }}>
+            {effectiveGroup ? `Run on "${effectiveGroup}"` : 'Run on all machines'}
+          </Button>
+        </Stack>
+      </CardContent>
     </Card>
   )
 }

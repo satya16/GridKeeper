@@ -63,10 +63,10 @@ const title = await page.title()
 // panel.
 await page.getByRole('tab', { name: 'Machines' }).click({ timeout: 3000 }).catch(() => {})
 await page.waitForTimeout(300)
-const nodeCardCount = await page.locator('.ant-card').count()
+const nodeCardCount = await page.locator('.MuiCard-root').count()
 
 // Exercise the two collapsible forms -- these are the parts most likely
-// to silently break (antd Collapse/Form wiring), not just static render.
+// to silently break (Accordion/controlled-form wiring), not just static render.
 let attachFormOk = false
 let fahFormOk = false
 try {
@@ -97,13 +97,13 @@ try {
 // that round trip end to end.
 let credentialBackendSelectOk = false
 try {
-  await page.getByRole('menuitem', { name: 'Credentials' }).click({ timeout: 3000 })
+  await page.locator('.MuiDrawer-root').getByText('Credentials', { exact: true }).click({ timeout: 3000 })
   await page.waitForTimeout(500)
-  // antd Select renders its placeholder as a div's text content, not a
-  // native `placeholder` attribute -- getByPlaceholder doesn't match it,
-  // hence the id selector (Form.Item name="backend" -> input id="backend").
-  await page.locator('#backend').click({ timeout: 3000 })
-  credentialBackendSelectOk = await page.getByText('BOINC', { exact: true }).isVisible()
+  // MUI's Select renders its trigger as a div[role="combobox"], labelled
+  // via the TextField's `label` prop (CredentialsSection.jsx) -- getByLabel
+  // is the documented, robust way to find it (no brittle id selector).
+  await page.getByLabel('Backend').click({ timeout: 3000 })
+  credentialBackendSelectOk = await page.getByRole('option', { name: 'BOINC' }).isVisible()
   await page.keyboard.press('Escape')
 } catch {
   /* no credential-create form for this role -- fine */
@@ -127,7 +127,7 @@ const overflowsHorizontally = await mobilePage.evaluate(
   () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
 )
 const cardTitleWidths = await mobilePage.evaluate(() =>
-  Array.from(document.querySelectorAll('.ant-card-head-title')).map((el) => ({
+  Array.from(document.querySelectorAll('.MuiCardHeader-title')).map((el) => ({
     text: el.textContent.trim(),
     width: el.getBoundingClientRect().width,
   })),
@@ -140,7 +140,7 @@ await mobilePage.screenshot({ path: mobileScreenshotPath, fullPage: true })
 await browser.close()
 
 console.log(`title: ${title}`)
-console.log(`ant-design cards rendered: ${nodeCardCount}`)
+console.log(`MUI cards rendered: ${nodeCardCount}`)
 console.log(`BOINC attach form opens: ${attachFormOk}`)
 console.log(`FAH config form opens: ${fahFormOk}`)
 console.log(`group actions toolbar visible: ${groupActionsOk}`)

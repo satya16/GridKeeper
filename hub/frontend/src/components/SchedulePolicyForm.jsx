@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Checkbox, InputNumber, Space } from 'antd'
+import { Box, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material'
 
 export const DEFAULT_SCHEDULE_POLICY = {
   enabled: false,
@@ -18,6 +18,10 @@ export function scheduleSummary(policy) {
   return parts.length ? parts.join(', ') : 'Enabled (no conditions set)'
 }
 
+function clampHour(n) {
+  return Math.min(23, Math.max(0, n))
+}
+
 // Shared by the fleet-wide form and each node card's per-machine
 // override -- same fields, same semantics as the previous
 // readSchedulePolicy()/renderScheduleBlock() in dashboard.js.
@@ -27,50 +31,61 @@ export function SchedulePolicyForm({ initialPolicy, submitLabel, onSubmit }) {
   const set = (patch) => setPolicy((p) => ({ ...p, ...patch }))
 
   return (
-    <form
+    <Box
+      component="form"
       onSubmit={(e) => {
         e.preventDefault()
         onSubmit(policy)
       }}
     >
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
-        <Checkbox checked={policy.enabled} onChange={(e) => set({ enabled: e.target.checked })}>
-          Enable schedule (unchecked = always allowed to run)
-        </Checkbox>
-        <Space wrap>
-          <Checkbox checked={policy.restrict_hours} onChange={(e) => set({ restrict_hours: e.target.checked })}>
-            Only between
-          </Checkbox>
-          <InputNumber
-            min={0}
-            max={23}
+      <Stack spacing={1} sx={{ width: '100%' }}>
+        <FormControlLabel
+          control={<Checkbox checked={policy.enabled} onChange={(e) => set({ enabled: e.target.checked })} />}
+          label="Enable schedule (unchecked = always allowed to run)"
+        />
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <FormControlLabel
+            control={<Checkbox checked={policy.restrict_hours} onChange={(e) => set({ restrict_hours: e.target.checked })} />}
+            label="Only between"
+          />
+          <TextField
+            type="number"
+            size="small"
             value={policy.active_start_hour}
-            onChange={(v) => set({ active_start_hour: v ?? 0 })}
+            onChange={(e) => set({ active_start_hour: clampHour(Number(e.target.value) || 0) })}
+            slotProps={{ htmlInput: { min: 0, max: 23 } }}
+            sx={{ width: 80 }}
           />
-          :00 and
-          <InputNumber
-            min={0}
-            max={23}
+          <Typography variant="body2">:00 and</Typography>
+          <TextField
+            type="number"
+            size="small"
             value={policy.active_end_hour}
-            onChange={(v) => set({ active_end_hour: v ?? 0 })}
+            onChange={(e) => set({ active_end_hour: clampHour(Number(e.target.value) || 0) })}
+            slotProps={{ htmlInput: { min: 0, max: 23 } }}
+            sx={{ width: 80 }}
           />
-          :00
-        </Space>
-        <Space wrap>
-          <Checkbox checked={policy.only_when_idle} onChange={(e) => set({ only_when_idle: e.target.checked })}>
-            Only when idle (BOINC: exact; Folding@home: best-effort) -- threshold
-          </Checkbox>
-          <InputNumber
-            min={1}
+          <Typography variant="body2">:00</Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <FormControlLabel
+            control={<Checkbox checked={policy.only_when_idle} onChange={(e) => set({ only_when_idle: e.target.checked })} />}
+            label="Only when idle (BOINC: exact; Folding@home: best-effort) -- threshold"
+          />
+          <TextField
+            type="number"
+            size="small"
             value={policy.idle_threshold_minutes}
-            onChange={(v) => set({ idle_threshold_minutes: v ?? 1 })}
+            onChange={(e) => set({ idle_threshold_minutes: Math.max(1, Number(e.target.value) || 1) })}
+            slotProps={{ htmlInput: { min: 1 } }}
+            sx={{ width: 80 }}
           />
-          min
-        </Space>
-        <Button type="primary" htmlType="submit">
+          <Typography variant="body2">min</Typography>
+        </Stack>
+        <Button type="submit" variant="contained" sx={{ alignSelf: 'flex-start' }}>
           {submitLabel}
         </Button>
-      </Space>
-    </form>
+      </Stack>
+    </Box>
   )
 }

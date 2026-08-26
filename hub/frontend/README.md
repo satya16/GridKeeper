@@ -1,8 +1,9 @@
 # GridKeeper dashboard (frontend)
 
-The hub's admin dashboard -- React + [Ant Design](https://ant.design/),
-built with Vite. Replaced an earlier server-rendered Jinja2 + vanilla-JS
-version on 2026-08-18; see
+The hub's admin dashboard -- React + [MUI](https://mui.com/), built with
+Vite. Replaced an earlier server-rendered Jinja2 + vanilla-JS version on
+2026-08-18, then rebuilt again from Ant Design to MUI (corporate visual
+refresh -- new palette/typography/elevation) on 2026-08-25; see
 [`_docs/knowledge-graph/dashboard-ui.md`](../../_docs/knowledge-graph/dashboard-ui.md)
 in the repo root for why and what changed.
 

@@ -8,10 +8,26 @@ files:
 relates_to: [hub, pairing, scheduling, metrics, boinc-backend, fah-backend, credentials, users-and-roles, power-estimate, plugin-registry]
 ---
 
-The admin-facing web UI — **React + Ant Design, built with Vite**
+The admin-facing web UI — **React + MUI, built with Vite**
 (`hub/frontend/`). `npm run build` outputs into `hub/app/static/dist/`
 (gitignored), served by `main.py`'s `/` route. See
 `hub/frontend/README.md` for build/dev/verify instructions.
+
+Rebuilt from Ant Design to MUI on 2026-08-25 (component-library swap +
+a genuine corporate-SaaS visual refresh: new indigo-blue palette,
+Roboto typography, card elevation, self-hosted via `@fontsource/roboto`
+-- not a mechanical restyle). `src/theme.js` builds the MUI theme per
+mode from the same palette tokens `index.css`'s `--gk-*` custom
+properties use, same pairing antd's `ConfigProvider` tokens had before.
+`notistack` (`src/snackbar.js`) replaced antd's `message.*` toast API.
+Layout is now a MUI `Drawer` (permanent+icon-rail on desktop, temporary
+overlay on mobile, replacing antd's `Layout.Sider`+hand-rolled backdrop)
++ a new shared `PageTabBar` component (MUI `Tabs` + the
+`tabBarExtraContent` left/right slots antd's `Tabs` used to provide
+natively). All prior functionality carried over 1:1 -- verified via
+`hub/frontend/scripts/verify.mjs` (updated for MUI's class names/roles)
+plus a real paired test node and a manual pass through every page in
+both themes, light/dark and desktop/375px mobile.
 
 Session-cookie auth: `App.jsx` checks `GET /api/session` on load and
 renders `LoginForm` until it succeeds; `api.js`'s shared `request()`
@@ -21,18 +37,19 @@ just silently fail every poll).
 
 REST-polling architecture, componentized: `usePolling()` drives
 independent timers per section (nodes/groups every 5s, discovery every
-4s, metrics every 7s). Layout: an antd `Layout.Sider` + `Menu` (Fleet /
+4s, metrics every 7s). Layout: a MUI `Drawer` + nav `List` (Fleet /
 Credentials / Metrics / Admin Console / Profile — the last two role-
 gated, see [users-and-roles](users-and-roles.md)) that collapses to an
 80px icon rail on desktop and fully hides behind an overlay+backdrop on
-mobile (breakpoint 767px); `FleetPage` further splits into its own tabs
+mobile (breakpoint 767px, MUI's temporary Drawer provides the
+overlay+backdrop itself); `FleetPage` further splits into its own tabs
 (Discovery / Machines / Schedule, also role-gated). No router library —
 plain `page` React state, no deep-linking needed for a single login-
-gated page. Every page's own `Tabs` carries the sider toggle, a light/
-dark theme toggle (persisted to `localStorage`, antd `ConfigProvider`
-algorithm + `--gk-*` CSS custom properties for the app's own SVG/CSS that
-antd's algorithm doesn't reach), and logout via `tabBarExtraContent` —
-no separate header bar.
+gated page. Every page's own `PageTabBar` carries the sider toggle, a
+light/dark theme toggle (persisted to `localStorage`, MUI theme built
+per-mode by `theme.js` + `--gk-*` CSS custom properties for the app's
+own SVG/CSS that MUI's theme doesn't reach), and logout via
+`tabBarExtraContent` — no separate header bar.
 
 Sections: `DiscoverySection` (pair-by-code plus bulk multi-select pairing,
 see [pairing](pairing.md)), `FleetScheduleSection` + `GroupActionsSection`

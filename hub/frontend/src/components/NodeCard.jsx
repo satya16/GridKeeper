@@ -1,5 +1,7 @@
-import { Card, Collapse, Divider, Typography, message } from 'antd'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Card, CardContent, CardHeader, Divider, Typography } from '@mui/material'
 import { api } from '../api.js'
+import { notify } from '../snackbar.js'
 import { BoincBlock } from './BoincBlock.jsx'
 import { FahBlock } from './FahBlock.jsx'
 import { GenericBackendBlock } from './GenericBackendBlock.jsx'
@@ -21,7 +23,7 @@ export function NodeCard({ node, backends, canWrite, onChanged }) {
       await api.setNodeGroup(node.id, next)
       onChanged()
     } catch (err) {
-      message.error(`Failed to set group: ${err.message}`)
+      notify.error(`Failed to set group: ${err.message}`)
     }
   }
 
@@ -30,95 +32,95 @@ export function NodeCard({ node, backends, canWrite, onChanged }) {
       await api.setNodeSchedule(node.id, policy)
       onChanged()
     } catch (err) {
-      message.error(`Failed to save schedule: ${err.message}`)
+      notify.error(`Failed to save schedule: ${err.message}`)
     }
   }
 
   return (
-    <Card
-      size="small"
-      title={
-        <span title={node.name}>
-          <span className={`dot ${node.online ? 'online' : 'offline'}`} />
-          {node.name}
-        </span>
-      }
-      styles={{ header: { display: 'flex' }, title: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }}
-      extra={<span className="muted">{node.os_name}</span>}
-    >
-      {canWrite ? (
-        <button
-          type="button"
-          onClick={handleSetGroup}
-          style={{
-            background: 'transparent',
-            border: '1px dashed var(--gk-border)',
-            color: 'var(--gk-muted)',
-            borderRadius: 999,
-            padding: '2px 10px',
-            fontSize: '0.75rem',
-            cursor: 'pointer',
-            marginBottom: 8,
-          }}
-        >
-          {node.group || 'Set group…'}
-        </button>
-      ) : (
-        node.group && (
-          <span
+    <Card>
+      <CardHeader
+        sx={{ pb: 1 }}
+        title={
+          <span title={node.name} style={{ display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span className={`dot ${node.online ? 'online' : 'offline'}`} />
+            {node.name}
+          </span>
+        }
+        action={<span className="muted">{node.os_name}</span>}
+      />
+      <CardContent sx={{ pt: 0 }}>
+        {canWrite ? (
+          <button
+            type="button"
+            onClick={handleSetGroup}
             style={{
-              display: 'inline-block',
-              border: '1px solid var(--gk-border)',
+              background: 'transparent',
+              border: '1px dashed var(--gk-border)',
               color: 'var(--gk-muted)',
               borderRadius: 999,
               padding: '2px 10px',
               fontSize: '0.75rem',
+              cursor: 'pointer',
               marginBottom: 8,
             }}
           >
-            {node.group}
-          </span>
-        )
-      )}
+            {node.group || 'Set group…'}
+          </button>
+        ) : (
+          node.group && (
+            <span
+              style={{
+                display: 'inline-block',
+                border: '1px solid var(--gk-border)',
+                color: 'var(--gk-muted)',
+                borderRadius: 999,
+                padding: '2px 10px',
+                fontSize: '0.75rem',
+                marginBottom: 8,
+              }}
+            >
+              {node.group}
+            </span>
+          )
+        )}
 
-      <BoincBlock nodeId={node.id} boinc={status.boinc} canWrite={canWrite} onChanged={onChanged} />
-      {status.boinc && status.fah && <Divider style={{ margin: '8px 0' }} />}
-      <FahBlock nodeId={node.id} fah={status.fah} canWrite={canWrite} onChanged={onChanged} />
-      {otherBackendNames.map((name) => (
-        <div key={name}>
-          {(status.boinc || status.fah) && <Divider style={{ margin: '8px 0' }} />}
-          <GenericBackendBlock
-            nodeId={node.id}
-            backendName={name}
-            backendStatus={status[name]}
-            actions={(backends || []).find((b) => b.name === name)?.actions}
-            canWrite={canWrite}
-            onChanged={onChanged}
-          />
-        </div>
-      ))}
-      {!status.boinc && !status.fah && !otherBackendNames.length && (
-        <Typography.Text type="secondary">No status reported yet.</Typography.Text>
-      )}
+        <BoincBlock nodeId={node.id} boinc={status.boinc} canWrite={canWrite} onChanged={onChanged} />
+        {status.boinc && status.fah && <Divider sx={{ my: 1 }} />}
+        <FahBlock nodeId={node.id} fah={status.fah} canWrite={canWrite} onChanged={onChanged} />
+        {otherBackendNames.map((name) => (
+          <Box key={name}>
+            {(status.boinc || status.fah) && <Divider sx={{ my: 1 }} />}
+            <GenericBackendBlock
+              nodeId={node.id}
+              backendName={name}
+              backendStatus={status[name]}
+              actions={(backends || []).find((b) => b.name === name)?.actions}
+              canWrite={canWrite}
+              onChanged={onChanged}
+            />
+          </Box>
+        ))}
+        {!status.boinc && !status.fah && !otherBackendNames.length && (
+          <Typography variant="body2" color="text.secondary">
+            No status reported yet.
+          </Typography>
+        )}
 
-      {canWrite ? (
-        <Collapse
-          ghost
-          size="small"
-          style={{ marginTop: 8 }}
-          items={[
-            {
-              key: 'schedule',
-              label: `Schedule: ${scheduleSummary(node.schedule)}`,
-              children: <SchedulePolicyForm initialPolicy={node.schedule} submitLabel="Save schedule" onSubmit={handleSaveSchedule} />,
-            },
-          ]}
-        />
-      ) : (
-        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-          Schedule: {scheduleSummary(node.schedule)}
-        </Typography.Text>
-      )}
+        {canWrite ? (
+          <Accordion disableGutters elevation={0} square sx={{ mt: 1, bgcolor: 'transparent', '&:before': { display: 'none' } }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 0, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+              <Typography variant="body2">Schedule: {scheduleSummary(node.schedule)}</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0 }}>
+              <SchedulePolicyForm initialPolicy={node.schedule} submitLabel="Save schedule" onSubmit={handleSaveSchedule} />
+            </AccordionDetails>
+          </Accordion>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            Schedule: {scheduleSummary(node.schedule)}
+          </Typography>
+        )}
+      </CardContent>
     </Card>
   )
 }
